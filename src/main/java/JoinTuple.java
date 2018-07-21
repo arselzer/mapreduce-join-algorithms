@@ -11,9 +11,19 @@ public class JoinTuple implements WritableComparable<JoinTuple> {
     public IntWritable tableIndex;
     public Text tuple;
 
+    public JoinTuple() {
+        tableIndex = new IntWritable(0);
+        tuple = new Text("");
+    }
+
     public JoinTuple(int i, Text tuple) {
-        tableIndex = new IntWritable(i);
+        this.tableIndex = new IntWritable(i);
         this.tuple = tuple;
+    }
+
+    public JoinTuple(JoinTuple toClone) {
+        this.tableIndex = new IntWritable(toClone.tableIndex.get());
+        this.tuple = new Text(toClone.tuple.toString());
     }
 
     public IntWritable getTableIndex() {
