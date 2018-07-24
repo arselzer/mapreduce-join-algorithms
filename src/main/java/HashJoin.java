@@ -10,9 +10,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 public class HashJoin {
     private static int index1;
@@ -51,14 +50,9 @@ public class HashJoin {
                 for (JoinTuple t2: tuples) {
                     //System.out.printf("Reducer: processing %s, %s\n", t1, t2);
                     if (t1.tableIndex.get() != t2.tableIndex.get() && t1.tableIndex.get() == 0) {
-                        String joinAttr1 = t1.getTuple().toString().split(",")[index1];
-                        String joinAttr2 = t2.getTuple().toString().split(",")[index2];
-
                         //System.out.printf("Reducer: %s, %s, join attrs: %s, %s\n", t1, t2, joinAttr1, joinAttr2);
 
-                        if (joinAttr1.equals(joinAttr2)) {
-                            context.write(key, new Text(t1.getTuple().toString() + "," + t2.getTuple().toString()));
-                        }
+                        context.write(key, new Text(t1.getTuple().toString() + "," + t2.getTuple().toString()));
                     }
                 }
             }
