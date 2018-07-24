@@ -1,8 +1,11 @@
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -17,45 +20,64 @@ public class HashJoin {
     private static int index1;
     private static int index2;
 
-    public static class HashJoinLeftMapper extends Mapper<Object, Text, Text, JoinTuple>{
+    public static class HashJoinLeftMapper extends Mapper<Object, Text, JoinTuple, JoinTuple>{
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
             System.out.printf("Mapping %s (left)\n", text);
             String joinAttr = text.toString().split(",")[index1];
-            context.write(new Text(joinAttr), new JoinTuple(0, text));
+            context.write(new JoinTuple(0, new Text(joinAttr)), new JoinTuple(0, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
         }
     }
 
-    public static class HashJoinRightMapper extends Mapper<Object, Text, Text, JoinTuple> {
+    public static class HashJoinRightMapper extends Mapper<Object, Text, JoinTuple, JoinTuple> {
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
             System.out.printf("Mapping %s (right)\n", text);
             String joinAttr = text.toString().split(",")[index2];
-            context.write(new Text(joinAttr), new JoinTuple(1, text));
+            context.write(new JoinTuple(1, new Text(joinAttr)), new JoinTuple(1, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(1, text));
         }
     }
 
-    public static class HashJoinReducer extends Reducer<Text, JoinTuple, Text, Text> {
-        public void reduce(Text key, Iterable<JoinTuple> values, Context context) throws IOException, InterruptedException {
+    public static class HashJoinReducer extends Reducer<JoinTuple, JoinTuple, Text, Text> {
+        public void reduce(JoinTuple key, Iterable<JoinTuple> values, Context context) throws IOException, InterruptedException {
             // The values have to be cached since the iterator can only be iterated through once
             List<JoinTuple> tuples = new ArrayList<>();
             for (JoinTuple t : values) {
                 // https://cornercases.wordpress.com/2011/08/18/hadoop-object-reuse-pitfall-all-my-reducer-values-are-the-same/
                 // Clone the JoinTuple object and its Writables because otherwise all values will be the same...
                 tuples.add(new JoinTuple(t));
+                //System.out.printf("Got %s\n", t);
             }
 
             //System.out.printf("Key: %s, Tuples: %s", key, tuples);
             for (JoinTuple t1 : tuples) {
                 for (JoinTuple t2: tuples) {
-                    //System.out.printf("Reducer: processing %s, %s\n", t1, t2);
+                    System.out.printf("Reducer: processing %s, %s\n", t1, t2);
                     if (t1.tableIndex.get() != t2.tableIndex.get() && t1.tableIndex.get() == 0) {
                         //System.out.printf("Reducer: %s, %s, join attrs: %s, %s\n", t1, t2, joinAttr1, joinAttr2);
 
-                        context.write(key, new Text(t1.getTuple().toString() + "," + t2.getTuple().toString()));
+                        context.write(key.getTuple(), new Text(t1.getTuple().toString() + "," + t2.getTuple().toString()));
                     }
                 }
             }
+        }
+    }
+
+    public static class JoinPartitioner extends Partitioner<JoinTuple, JoinTuple> {
+        @Override
+        public int getPartition(JoinTuple key, JoinTuple value, int numPartitions) {
+            return (key.getTuple().hashCode() & Integer.MAX_VALUE) % numPartitions;
+        }
+    }
+
+    public static class GroupingComparator extends WritableComparator {
+        protected GroupingComparator() {
+            super(JoinTuple.class);
+        }
+
+        public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+            // Ignore the first 4 bytes when comparing - 32 bit integer
+            return compareBytes(b1, s1 + 4, l1 - 4, b2, s2 + 4, l2 - 4);
         }
     }
 
@@ -81,9 +103,12 @@ public class HashJoin {
         MultipleInputs.addInputPath(job, input2, TextInputFormat.class, HashJoinRightMapper.class);
         FileOutputFormat.setOutputPath(job, output);
 
+        job.setPartitionerClass(JoinPartitioner.class);
+        job.setGroupingComparatorClass(GroupingComparator.class);
+
         job.setReducerClass(HashJoinReducer.class);
 
-        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputKeyClass(JoinTuple.class);
         job.setMapOutputValueClass(JoinTuple.class);
 
         job.setOutputKeyClass(Text.class);

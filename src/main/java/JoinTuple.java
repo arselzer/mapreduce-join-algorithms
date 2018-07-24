@@ -43,7 +43,13 @@ public class JoinTuple implements WritableComparable<JoinTuple> {
     }
 
     public int compareTo(JoinTuple joinTuple) {
-        return tuple.compareTo(joinTuple.tuple);
+        int tupleCmp = tuple.compareTo(joinTuple.tuple);
+        if (tupleCmp != 0) {
+            return tupleCmp;
+        }
+        else {
+            return tableIndex.compareTo(joinTuple.tableIndex);
+        }
     }
 
     public void write(DataOutput dataOutput) throws IOException {
@@ -67,7 +73,6 @@ public class JoinTuple implements WritableComparable<JoinTuple> {
 
     @Override
     public int hashCode() {
-
         return Objects.hash(tableIndex, tuple);
     }
 
