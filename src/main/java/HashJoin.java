@@ -53,10 +53,29 @@ public class HashJoin {
             for (JoinTuple t1 : tuples) {
                 for (JoinTuple t2: tuples) {
                     System.out.printf("Reducer: processing %s, %s\n", t1, t2);
-                    if (t1.tableIndex.get() != t2.tableIndex.get() && t1.tableIndex.get() == 0) {
+                    if (t1.getTableIndex().get() != t2.getTableIndex().get() && t1.getTableIndex().get() == 0) {
                         //System.out.printf("Reducer: %s, %s, join attrs: %s, %s\n", t1, t2, joinAttr1, joinAttr2);
 
                         context.write(key.getTuple(), new Text(t1.getTuple().toString() + "," + t2.getTuple().toString()));
+                    }
+                }
+            }
+        }
+    }
+
+    public static class HashJoinOptimizedReducer extends Reducer<JoinTuple, JoinTuple, Text, Text> {
+        public void reduce(JoinTuple key, Iterable<JoinTuple> values, Context context) throws IOException, InterruptedException {
+            // The tuples from the first table will come first in the list. They are saved to a list to
+            // reduce the memory consumption
+            List<String> firstTableTuples = new ArrayList<>();
+
+            for (JoinTuple t : values) {
+                if (t.getTableIndex().get() == 0) {
+                    firstTableTuples.add(t.getTuple().toString());
+                }
+                else {
+                    for (String t1Tuple : firstTableTuples) {
+                        context.write(key.getTuple(), new Text(t1Tuple + "," + t.getTuple().toString()));
                     }
                 }
             }
@@ -106,7 +125,7 @@ public class HashJoin {
         job.setPartitionerClass(JoinPartitioner.class);
         job.setGroupingComparatorClass(GroupingComparator.class);
 
-        job.setReducerClass(HashJoinReducer.class);
+        job.setReducerClass(HashJoinOptimizedReducer.class);
 
         job.setMapOutputKeyClass(JoinTuple.class);
         job.setMapOutputValueClass(JoinTuple.class);

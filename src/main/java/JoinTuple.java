@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class JoinTuple implements WritableComparable<JoinTuple> {
-    public IntWritable tableIndex;
-    public Text tuple;
+    private IntWritable tableIndex;
+    private Text tuple;
 
     public JoinTuple() {
         tableIndex = new IntWritable(0);
