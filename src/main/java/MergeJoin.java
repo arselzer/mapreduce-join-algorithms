@@ -5,6 +5,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.join.CompositeInputFormat;
 import org.apache.hadoop.mapreduce.lib.join.TupleWritable;
@@ -51,9 +52,12 @@ public class MergeJoin {
         // Configure an inner join of two inputs
         String joinExpression = CompositeInputFormat.compose("inner", KeyValueTextInputFormat.class, input1, input2);
         conf.set(CompositeInputFormat.JOIN_EXPR, joinExpression);
-        conf.set(CompositeInputFormat.JOIN_COMPARATOR, IntWritable.Comparator.class.getName());
-        // Set the key - value separator
+        //conf.set(CompositeInputFormat.JOIN_COMPARATOR, IntWritable.Comparator.class.getName());
+        // Set the key - value separator (default = tab)
         conf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator", SEPARATOR);
+        // Disable the splitting of files so that each split corresponds to one file/table and there
+        // is an equal number if splits for both tables being joined
+        conf.set(FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE + "");
 
         Job job = Job.getInstance(conf, "Hash Join");
 
