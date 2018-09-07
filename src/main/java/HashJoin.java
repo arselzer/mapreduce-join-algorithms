@@ -19,7 +19,7 @@ public class HashJoin implements Join {
 
     public static class HashJoinLeftMapper extends Mapper<Object, Text, JoinTuple, JoinTuple>{
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
-            System.out.printf("Mapping %s (left)\n", text);
+            //System.out.printf("Mapping %s (left)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index1", 0)];
             context.write(new JoinTuple(0, new Text(joinAttr)), new JoinTuple(0, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
@@ -28,7 +28,7 @@ public class HashJoin implements Join {
 
     public static class HashJoinRightMapper extends Mapper<Object, Text, JoinTuple, JoinTuple> {
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
-            System.out.printf("Mapping %s (right)\n", text);
+            //System.out.printf("Mapping %s (right)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index2", 0)];
             context.write(new JoinTuple(1, new Text(joinAttr)), new JoinTuple(1, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(1, text));
@@ -49,7 +49,7 @@ public class HashJoin implements Join {
             //System.out.printf("Key: %s, Tuples: %s", key, tuples);
             for (JoinTuple t1 : tuples) {
                 for (JoinTuple t2: tuples) {
-                    System.out.printf("Reducer: processing %s, %s\n", t1, t2);
+                    //System.out.printf("Reducer: processing %s, %s\n", t1, t2);
                     if (t1.getTableIndex().get() != t2.getTableIndex().get() && t1.getTableIndex().get() == 0) {
                         //System.out.printf("Reducer: %s, %s, join attrs: %s, %s\n", t1, t2, joinAttr1, joinAttr2);
 
@@ -98,12 +98,12 @@ public class HashJoin implements Join {
     }
 
     @Override
-    public void init(JoinConfig config) throws IOException {
+    public void init(JoinConfig config, String name) throws IOException {
         Configuration jobConf = new Configuration();
         jobConf.setInt("index1", config.getIndices()[0]);
         jobConf.setInt("index2", config.getIndices()[1]);
 
-        job = Job.getInstance(jobConf, "Hash Join");
+        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
 
         job.setJarByClass(HashJoin.class);
 
@@ -148,7 +148,7 @@ public class HashJoin implements Join {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new HashJoin();
-        join.init(config);
+        join.init(config, "Hash Join");
 
         Job job = join.getJob();
 

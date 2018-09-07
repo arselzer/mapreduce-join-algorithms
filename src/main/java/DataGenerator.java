@@ -1,3 +1,4 @@
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -51,31 +52,26 @@ public class DataGenerator {
         this.keyRepetitions = keyRepetitions;
     }
 
-    public void write(String fileName) {
-        try {
-            PrintWriter t1writer = new PrintWriter("t1_" + fileName, "UTF-8");
-            PrintWriter t2writer = new PrintWriter("t2_" + fileName, "UTF-8");
-            int keyModulo = nRows / keyRepetitions;
+    public void write(DataOutputStream file1, DataOutputStream file2) {
+        PrintWriter t1writer = new PrintWriter(file1);
+        PrintWriter t2writer = new PrintWriter(file2);
 
-            for (int i = 0; i < nRows; i++) {
-                String row = "" + (i % keyModulo);
+        int keyModulo = nRows / keyRepetitions;
 
-                for (Attribute a : attributes) {
-                    row += "," + a.generate();
-                }
+        for (int i = 0; i < nRows; i++) {
+            String row = "" + (i % keyModulo);
 
-                row += "\n";
-
-                t1writer.write(row);
-
-                t2writer.write(row);
+            for (Attribute a : attributes) {
+                row += "," + a.generate();
             }
 
-            t1writer.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            row += "\n";
+
+            t1writer.write(row);
+            t2writer.write(row);
         }
+
+        t1writer.close();
+        t2writer.close();
     }
 }
