@@ -1,6 +1,5 @@
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
@@ -13,17 +12,15 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-public class HashJoin {
-    private static int index1;
-    private static int index2;
+public class HashJoin implements Join {
+    private Job job;
 
     public static class HashJoinLeftMapper extends Mapper<Object, Text, JoinTuple, JoinTuple>{
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
             System.out.printf("Mapping %s (left)\n", text);
-            String joinAttr = text.toString().split(",")[index1];
+            String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index1", 0)];
             context.write(new JoinTuple(0, new Text(joinAttr)), new JoinTuple(0, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
         }
@@ -32,7 +29,7 @@ public class HashJoin {
     public static class HashJoinRightMapper extends Mapper<Object, Text, JoinTuple, JoinTuple> {
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
             System.out.printf("Mapping %s (right)\n", text);
-            String joinAttr = text.toString().split(",")[index2];
+            String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index2", 0)];
             context.write(new JoinTuple(1, new Text(joinAttr)), new JoinTuple(1, text));
             //System.out.printf("Wrote %s\n",  new JoinTuple(1, text));
         }
@@ -100,27 +97,19 @@ public class HashJoin {
         }
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
-        if (args.length != 5) {
-            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
-            System.exit(1);
-        }
+    @Override
+    public void init(JoinConfig config) throws IOException {
+        Configuration jobConf = new Configuration();
+        jobConf.setInt("index1", config.getIndices()[0]);
+        jobConf.setInt("index2", config.getIndices()[1]);
 
-        Path input1 = new Path(args[0]);
-        Path input2 = new Path(args[2]);
-        Path output = new Path(args[4]);
-
-        index1 = Integer.parseInt(args[1]);
-        index2 = Integer.parseInt(args[3]);
-
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "Hash Join");
+        job = Job.getInstance(jobConf, "Hash Join");
 
         job.setJarByClass(HashJoin.class);
 
-        MultipleInputs.addInputPath(job, input1, TextInputFormat.class, HashJoinLeftMapper.class);
-        MultipleInputs.addInputPath(job, input2, TextInputFormat.class, HashJoinRightMapper.class);
-        FileOutputFormat.setOutputPath(job, output);
+        MultipleInputs.addInputPath(job, config.getInputs()[0], TextInputFormat.class, HashJoinLeftMapper.class);
+        MultipleInputs.addInputPath(job, config.getInputs()[1], TextInputFormat.class, HashJoinRightMapper.class);
+        FileOutputFormat.setOutputPath(job, config.getOutput());
 
         job.setPartitionerClass(JoinPartitioner.class);
         job.setGroupingComparatorClass(GroupingComparator.class);
@@ -132,6 +121,36 @@ public class HashJoin {
 
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+    }
+
+    @Override
+    public Job getJob() {
+        return job;
+    }
+
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+        if (args.length != 5) {
+            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.exit(1);
+        }
+
+        Path input1 = new Path(args[0]);
+        Path input2 = new Path(args[2]);
+        Path output = new Path(args[4]);
+
+        int index1 = Integer.parseInt(args[1]);
+        int index2 = Integer.parseInt(args[3]);
+
+        Path[] inputs = {input1, input2};
+        Integer[] indices = {index1, index2};
+
+        JoinConfig config = new JoinConfig(inputs, indices, output);
+
+        Join join = new HashJoin();
+        join.init(config);
+
+        Job job = join.getJob();
 
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
