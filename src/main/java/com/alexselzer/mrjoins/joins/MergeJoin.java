@@ -2,6 +2,7 @@ package com.alexselzer.mrjoins.joins;
 
 import com.alexselzer.mrjoins.Join;
 import com.alexselzer.mrjoins.JoinConfig;
+import com.alexselzer.mrjoins.utils.KeyExtractor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -49,8 +50,8 @@ public class MergeJoin implements Join {
             keyExtracterRight = Job.getInstance(keyExtractorRightConf,
                     (name == null ? "Merge Join" : name) + " key extractor right");
 
-            keyExtracterLeft.setJarByClass(MergeJoin.class);
-            keyExtracterRight.setJarByClass(MergeJoin.class);
+            keyExtracterLeft.setJarByClass(KeyExtractor.class);
+            keyExtracterRight.setJarByClass(KeyExtractor.class);
 
             FileInputFormat.setInputPaths(keyExtracterLeft, config.getInputs()[0]);
             FileInputFormat.setInputPaths(keyExtracterRight, config.getInputs()[1]);
@@ -58,8 +59,8 @@ public class MergeJoin implements Join {
             FileOutputFormat.setOutputPath(keyExtracterLeft, tempFile1);
             FileOutputFormat.setOutputPath(keyExtracterRight, tempFile2);
 
-            keyExtracterLeft.setMapperClass(KeyExtractionMapper.class);
-            keyExtracterRight.setMapperClass(KeyExtractionMapper.class);
+            keyExtracterLeft.setMapperClass(KeyExtractor.KeyExtractionMapper.class);
+            keyExtracterRight.setMapperClass(KeyExtractor.KeyExtractionMapper.class);
             keyExtracterLeft.setNumReduceTasks(0);
             keyExtracterRight.setNumReduceTasks(0);
 
@@ -116,13 +117,6 @@ public class MergeJoin implements Join {
         mergeJob.setOutputValueClass(Text.class);
     }
 
-    public static class KeyExtractionMapper extends Mapper<Object, Text, Text, Text> {
-        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            String joinAttr = value.toString().split(",")[context.getConfiguration().getInt("index", 0)];
-
-            context.write(new Text(joinAttr), value);
-        }
-    }
 
     public static class MergeJoinMapper extends Mapper<Text, TupleWritable, Text, Text>{
         public void map(Text key, TupleWritable value, Context context) throws IOException, InterruptedException {
