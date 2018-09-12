@@ -87,11 +87,6 @@ public class BroadcastJoin implements Join {
     }
 
     @Override
-    public Job getMergeJob() {
-        return job;
-    }
-
-    @Override
     public boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException {
         return job.waitForCompletion(true);
     }
@@ -117,8 +112,6 @@ public class BroadcastJoin implements Join {
         Join join = new BroadcastJoin();
         join.init(config, "Broadcast Join");
 
-        Job job = join.getMergeJob();
-
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        join.run(true);
     }
 }

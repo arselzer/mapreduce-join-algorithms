@@ -133,11 +133,6 @@ public class HashJoin implements Join {
     }
 
     @Override
-    public Job getMergeJob() {
-        return job;
-    }
-
-    @Override
     public boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException {
         return job.waitForCompletion(true);
     }
@@ -164,8 +159,6 @@ public class HashJoin implements Join {
         Join join = new HashJoin();
         join.init(config, "Hash Join");
 
-        Job job = join.getMergeJob();
-
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        join.run(true);
     }
 }
