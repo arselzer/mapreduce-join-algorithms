@@ -14,14 +14,53 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.IOException;
 import java.util.Iterator;
 
-public class MergeJoin {
+public class MergeJoin implements Join {
     private static final String SEPARATOR = "\t";
-    private static int index1;
-    private static int index2;
+    private Job job;
+
+    @Override
+    public void init(JoinConfig config, String name) throws IOException {
+        Configuration jobConf = new Configuration();
+
+        // Configure an inner join of two inputs
+        String joinExpression = CompositeInputFormat.compose("inner", KeyValueTextInputFormat.class,
+                config.getInputs()[0], config.getInputs()[1]);
+        jobConf.set(CompositeInputFormat.JOIN_EXPR, joinExpression);
+        //conf.set(CompositeInputFormat.JOIN_COMPARATOR, IntWritable.Comparator.class.getName());
+
+        // Set the key - value separator (default = tab)
+        jobConf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator", SEPARATOR);
+
+        // Disable the splitting of files so that each split corresponds to one file/table and there
+        // is an equal number if splits for both tables being joined
+        jobConf.set(FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE + "");
+
+        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+
+        job.setJarByClass(MergeJoin.class);
+
+        FileOutputFormat.setOutputPath(job, config.getOutput());
+
+        job.setInputFormatClass(CompositeInputFormat.class);
+
+        job.setMapperClass(MergeJoinMapper.class);
+        job.setNumReduceTasks(0);
+
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+    }
+
+    @Override
+    public Job getJob() {
+        return job;
+    }
 
     public static class MergeJoinMapper extends Mapper<Text, TupleWritable, Text, Text>{
         public void map(Text key, TupleWritable value, Context context) throws IOException, InterruptedException {
-            System.out.printf("Key: %s\n", key);
+            //System.out.printf("Key: %s\n", key);
             StringBuilder output = new StringBuilder();
             Iterator<Writable> it = value.iterator();
             output.append(it.next());
@@ -45,36 +84,17 @@ public class MergeJoin {
         Path input2 = new Path(args[2]);
         Path output = new Path(args[4]);
 
-        index1 = Integer.parseInt(args[1]);
-        index2 = Integer.parseInt(args[3]);
+        int index1 = Integer.parseInt(args[1]);
+        int index2 = Integer.parseInt(args[3]);
+        Path[] inputs = {input1, input2};
+        Integer[] indices = {index1, index2};
 
-        Configuration conf = new Configuration();
-        // Configure an inner join of two inputs
-        String joinExpression = CompositeInputFormat.compose("inner", KeyValueTextInputFormat.class, input1, input2);
-        conf.set(CompositeInputFormat.JOIN_EXPR, joinExpression);
-        //conf.set(CompositeInputFormat.JOIN_COMPARATOR, IntWritable.Comparator.class.getName());
-        // Set the key - value separator (default = tab)
-        conf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator", SEPARATOR);
-        // Disable the splitting of files so that each split corresponds to one file/table and there
-        // is an equal number if splits for both tables being joined
-        conf.set(FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE + "");
+        JoinConfig config = new JoinConfig(inputs, indices, output);
 
-        Job job = Job.getInstance(conf, "Hash Join");
+        Join join = new MergeJoin();
+        join.init(config, "Merge Join");
 
-        job.setJarByClass(MergeJoin.class);
-
-        FileOutputFormat.setOutputPath(job, output);
-
-        job.setInputFormatClass(CompositeInputFormat.class);
-
-        job.setMapperClass(MergeJoinMapper.class);
-        job.setNumReduceTasks(0);
-
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
-
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
+        Job job = join.getJob();
 
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
