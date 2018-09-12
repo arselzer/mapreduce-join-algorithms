@@ -20,9 +20,39 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BroadcastJoin {
-    private static int index1;
-    private static int index2;
+public class BroadcastJoin implements Join {
+    private Job job;
+
+    @Override
+    public void init(JoinConfig config, String name) throws IOException {
+        Configuration jobConf = new Configuration();
+        jobConf.setInt("index1", config.getIndices()[0]);
+        jobConf.setInt("index2", config.getIndices()[1]);
+
+        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+
+        job.setJarByClass(BroadcastJoin.class);
+
+        // Add the first file to the distributed cache - sending it to all mappers
+        job.addCacheFile(config.getInputs()[0].toUri());
+
+        FileInputFormat.setInputPaths(job, config.getInputs()[1]);
+        FileOutputFormat.setOutputPath(job, config.getOutput());
+
+        job.setMapperClass(BroadcastJoinMapper.class);
+        job.setNumReduceTasks(0);
+
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+    }
+
+    @Override
+    public Job getJob() {
+        return job;
+    }
 
     public static class BroadcastJoinMapper extends Mapper<Object, Text, Text, Text>{
         Map<String, String> map = new HashMap<>();
@@ -36,13 +66,13 @@ public class BroadcastJoin {
                 System.err.println("Error: There are no cached files");
             }
 
-            System.out.printf("Cached file: %s\n", cachedFiles[0]);
+            //System.out.printf("Cached file: %s\n", cachedFiles[0]);
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(fs.open(new Path(cachedFiles[0]))));
 
             String line = reader.readLine();
             while (line != null) {
-                String joinAttr = line.split(",")[index1];
+                String joinAttr = line.split(",")[context.getConfiguration().getInt("index1", 0)];
                 map.put(joinAttr, line);
 
                 line = reader.readLine();
@@ -52,8 +82,8 @@ public class BroadcastJoin {
         }
 
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
-            System.out.printf("Mapping %s (right)\n", text);
-            String joinAttr = text.toString().split(",")[index1];
+            //System.out.printf("Mapping %s (right)\n", text);
+            String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index2", 0)];
             if (map.containsKey(joinAttr)) {
                 context.write(new Text(joinAttr), new Text(map.get(joinAttr) + "," + text.toString()));
             }
@@ -71,28 +101,18 @@ public class BroadcastJoin {
         Path input2 = new Path(args[2]);
         Path output = new Path(args[4]);
 
-        index1 = Integer.parseInt(args[1]);
-        index2 = Integer.parseInt(args[3]);
+        int index1 = Integer.parseInt(args[1]);
+        int index2 = Integer.parseInt(args[3]);
 
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "Broadcast Join");
+        Path[] inputs = {input1, input2};
+        Integer[] indices = {index1, index2};
 
-        job.setJarByClass(BroadcastJoin.class);
+        JoinConfig config = new JoinConfig(inputs, indices, output);
 
-        // Add the first file to the distributed cache - sending it to all mappers
-        job.addCacheFile(input1.toUri());
+        Join join = new BroadcastJoin();
+        join.init(config, "Broadcast Join");
 
-        FileInputFormat.setInputPaths(job, input2);
-        FileOutputFormat.setOutputPath(job, output);
-
-        job.setMapperClass(BroadcastJoinMapper.class);
-        job.setNumReduceTasks(0);
-
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
-
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
+        Job job = join.getJob();
 
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }

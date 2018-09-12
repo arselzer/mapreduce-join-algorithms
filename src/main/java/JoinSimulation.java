@@ -45,7 +45,7 @@ public class JoinSimulation {
 
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
-        Join join = new HashJoin();
+        Join join = new BroadcastJoin();
         join.init(config, "Hash Join");
 
         Job job = join.getJob();
