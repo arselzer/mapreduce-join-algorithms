@@ -1,3 +1,5 @@
+package com.alexselzer.mrjoins;
+
 import org.apache.hadoop.fs.Path;
 
 public class JoinConfig {

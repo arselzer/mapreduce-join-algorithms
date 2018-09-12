@@ -1,6 +1,9 @@
+package com.alexselzer.mrjoins.joins;
+
+import com.alexselzer.mrjoins.Join;
+import com.alexselzer.mrjoins.JoinConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
@@ -35,7 +38,7 @@ public class MergeJoin implements Join {
         // is an equal number if splits for both tables being joined
         jobConf.set(FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE + "");
 
-        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+        job = Job.getInstance(jobConf, name == null ? "Hash com.alexselzer.mrjoins.Join" : name);
 
         job.setJarByClass(MergeJoin.class);
 
@@ -76,7 +79,7 @@ public class MergeJoin implements Join {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: MergeJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: joins.com.alexselzer.mrjoins.joins.MergeJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
@@ -92,7 +95,7 @@ public class MergeJoin implements Join {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new MergeJoin();
-        join.init(config, "Merge Join");
+        join.init(config, "Merge com.alexselzer.mrjoins.Join");
 
         Job job = join.getJob();
 

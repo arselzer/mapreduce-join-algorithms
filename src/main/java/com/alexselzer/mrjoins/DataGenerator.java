@@ -1,3 +1,5 @@
+package com.alexselzer.mrjoins;
+
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;

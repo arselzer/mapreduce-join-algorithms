@@ -1,9 +1,10 @@
+package com.alexselzer.mrjoins;
+
+import com.alexselzer.mrjoins.joins.MergeJoin;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
@@ -46,7 +47,7 @@ public class JoinSimulation {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new MergeJoin();
-        join.init(config, "Hash Join");
+        join.init(config, "Hash com.alexselzer.mrjoins.Join");
 
         Job job = join.getJob();
 

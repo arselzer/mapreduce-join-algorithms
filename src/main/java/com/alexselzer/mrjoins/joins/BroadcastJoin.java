@@ -1,23 +1,19 @@
-import javafx.scene.control.cell.MapValueFactory;
+package com.alexselzer.mrjoins.joins;
+
+import com.alexselzer.mrjoins.Join;
+import com.alexselzer.mrjoins.JoinConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.FileVisitOption;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class BroadcastJoin implements Join {
@@ -29,7 +25,7 @@ public class BroadcastJoin implements Join {
         jobConf.setInt("index1", config.getIndices()[0]);
         jobConf.setInt("index2", config.getIndices()[1]);
 
-        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+        job = Job.getInstance(jobConf, name == null ? "Hash com.alexselzer.mrjoins.Join" : name);
 
         job.setJarByClass(BroadcastJoin.class);
 
@@ -87,13 +83,13 @@ public class BroadcastJoin implements Join {
             if (map.containsKey(joinAttr)) {
                 context.write(new Text(joinAttr), new Text(map.get(joinAttr) + "," + text.toString()));
             }
-            //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
+            //System.out.printf("Wrote %s\n",  new com.alexselzer.mrjoins.JoinTuple(0, text));
         }
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: joins.com.alexselzer.mrjoins.joins.HashJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
@@ -110,7 +106,7 @@ public class BroadcastJoin implements Join {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new BroadcastJoin();
-        join.init(config, "Broadcast Join");
+        join.init(config, "Broadcast com.alexselzer.mrjoins.Join");
 
         Job job = join.getJob();
 

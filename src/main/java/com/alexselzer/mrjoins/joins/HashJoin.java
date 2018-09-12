@@ -1,3 +1,8 @@
+package com.alexselzer.mrjoins.joins;
+
+import com.alexselzer.mrjoins.Join;
+import com.alexselzer.mrjoins.JoinConfig;
+import com.alexselzer.mrjoins.JoinTuple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -22,7 +27,7 @@ public class HashJoin implements Join {
             //System.out.printf("Mapping %s (left)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index1", 0)];
             context.write(new JoinTuple(0, new Text(joinAttr)), new JoinTuple(0, text));
-            //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
+            //System.out.printf("Wrote %s\n",  new com.alexselzer.mrjoins.JoinTuple(0, text));
         }
     }
 
@@ -31,7 +36,7 @@ public class HashJoin implements Join {
             //System.out.printf("Mapping %s (right)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index2", 0)];
             context.write(new JoinTuple(1, new Text(joinAttr)), new JoinTuple(1, text));
-            //System.out.printf("Wrote %s\n",  new JoinTuple(1, text));
+            //System.out.printf("Wrote %s\n",  new com.alexselzer.mrjoins.JoinTuple(1, text));
         }
     }
 
@@ -41,7 +46,7 @@ public class HashJoin implements Join {
             List<JoinTuple> tuples = new ArrayList<>();
             for (JoinTuple t : values) {
                 // https://cornercases.wordpress.com/2011/08/18/hadoop-object-reuse-pitfall-all-my-reducer-values-are-the-same/
-                // Clone the JoinTuple object and its Writables because otherwise all values will be the same...
+                // Clone the com.alexselzer.mrjoins.JoinTuple object and its Writables because otherwise all values will be the same...
                 tuples.add(new JoinTuple(t));
                 //System.out.printf("Got %s\n", t);
             }
@@ -103,7 +108,7 @@ public class HashJoin implements Join {
         jobConf.setInt("index1", config.getIndices()[0]);
         jobConf.setInt("index2", config.getIndices()[1]);
 
-        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+        job = Job.getInstance(jobConf, name == null ? "Hash com.alexselzer.mrjoins.Join" : name);
 
         job.setJarByClass(HashJoin.class);
 
@@ -131,7 +136,7 @@ public class HashJoin implements Join {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: joins.com.alexselzer.mrjoins.joins.HashJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
@@ -148,7 +153,7 @@ public class HashJoin implements Join {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new HashJoin();
-        join.init(config, "Hash Join");
+        join.init(config, "Hash com.alexselzer.mrjoins.Join");
 
         Job job = join.getJob();
 

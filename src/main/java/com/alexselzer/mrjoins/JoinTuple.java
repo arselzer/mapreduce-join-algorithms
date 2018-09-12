@@ -1,3 +1,5 @@
+package com.alexselzer.mrjoins;
+
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -78,7 +80,7 @@ public class JoinTuple implements WritableComparable<JoinTuple> {
 
     @Override
     public String toString() {
-        return "JoinTuple{" +
+        return "com.alexselzer.mrjoins.JoinTuple{" +
                 "tableIndex=" + tableIndex +
                 ", tuple=" + tuple +
                 '}';

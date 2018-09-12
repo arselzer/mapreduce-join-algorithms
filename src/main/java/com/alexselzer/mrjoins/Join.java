@@ -1,3 +1,5 @@
+package com.alexselzer.mrjoins;
+
 import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
