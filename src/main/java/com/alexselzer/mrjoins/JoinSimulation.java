@@ -14,7 +14,7 @@ public class JoinSimulation {
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         FileSystem hdfs = FileSystem.get(new Configuration());
 
-        DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, 100000,
+        DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, 10000,
                 Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
                         new DataGenerator.Attribute(80)),2);
 
@@ -61,9 +61,5 @@ public class JoinSimulation {
         System.out.printf("Time taken: %.3f ms\n", diff / 1000000.0);
 
         System.exit(0);
-    }
-
-    private static void generateData() {
-
     }
 }

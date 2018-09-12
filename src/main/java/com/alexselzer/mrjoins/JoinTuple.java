@@ -80,7 +80,7 @@ public class JoinTuple implements WritableComparable<JoinTuple> {
 
     @Override
     public String toString() {
-        return "com.alexselzer.mrjoins.JoinTuple{" +
+        return "JoinTuple{" +
                 "tableIndex=" + tableIndex +
                 ", tuple=" + tuple +
                 '}';

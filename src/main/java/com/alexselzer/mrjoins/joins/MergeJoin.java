@@ -6,6 +6,8 @@ import com.alexselzer.mrjoins.utils.KeyExtractor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -13,9 +15,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.join.CompositeInputFormat;
 import org.apache.hadoop.mapreduce.lib.join.TupleWritable;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileAsBinaryOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.InputSampler;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 
@@ -52,8 +58,8 @@ public class MergeJoin implements Join {
     }
 
 
-    public static class MergeJoinMapper extends Mapper<Text, TupleWritable, Text, Text>{
-        public void map(Text key, TupleWritable value, Context context) throws IOException, InterruptedException {
+    public static class MergeJoinMapper extends Mapper<LongWritable, TupleWritable, Text, Text>{
+        public void map(LongWritable key, TupleWritable value, Context context) throws IOException, InterruptedException {
             StringBuilder output = new StringBuilder();
             Iterator<Writable> it = value.iterator();
             output.append(it.next());
@@ -62,7 +68,7 @@ public class MergeJoin implements Join {
                 output.append(it.next());
             }
 
-            context.write(key, new Text(output.toString()));
+            context.write(new Text(key + ""), new Text(output.toString()));
         }
     }
 
@@ -81,9 +87,6 @@ public class MergeJoin implements Join {
         Path tempInputSorted2 = new Path("temp_sorted_" + config.getInputs()[1].getName());
 
         if (extractKeys) {
-            hdfs.deleteOnExit(tempInput1);
-            hdfs.deleteOnExit(tempInput2);
-
             Configuration keyExtractorLeftConf = new Configuration();
             keyExtractorLeftConf.setInt("index", config.getIndices()[0]);
             Configuration keyExtractorRightConf = new Configuration();
@@ -102,26 +105,28 @@ public class MergeJoin implements Join {
 
             FileOutputFormat.setOutputPath(keyExtractorLeft, tempInput1);
             FileOutputFormat.setOutputPath(keyExtractorRight, tempInput2);
+            keyExtractorLeft.setOutputFormatClass(SequenceFileOutputFormat.class);
+            keyExtractorRight.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-            keyExtractorLeft.setMapperClass(KeyExtractor.KeyExtractionMapper.class);
-            keyExtractorRight.setMapperClass(KeyExtractor.KeyExtractionMapper.class);
+            keyExtractorLeft.setMapperClass(KeyExtractor.KeyExtractionIntegerMapper.class);
+            keyExtractorRight.setMapperClass(KeyExtractor.KeyExtractionIntegerMapper.class);
             keyExtractorLeft.setNumReduceTasks(0);
             keyExtractorRight.setNumReduceTasks(0);
 
-            keyExtractorLeft.setMapOutputKeyClass(Text.class);
+            keyExtractorLeft.setMapOutputKeyClass(LongWritable.class);
             keyExtractorLeft.setMapOutputValueClass(Text.class);
 
-            keyExtractorLeft.setOutputKeyClass(Text.class);
+            keyExtractorLeft.setOutputKeyClass(LongWritable.class);
             keyExtractorLeft.setOutputValueClass(Text.class);
 
-            keyExtractorRight.setMapOutputKeyClass(Text.class);
+            keyExtractorRight.setMapOutputKeyClass(LongWritable.class);
             keyExtractorRight.setMapOutputValueClass(Text.class);
 
-            keyExtractorRight.setOutputKeyClass(Text.class);
+            keyExtractorRight.setOutputKeyClass(LongWritable.class);
             keyExtractorRight.setOutputValueClass(Text.class);
 
             // Set the inputs of the merge job to the temp output file
-            joinExpression = CompositeInputFormat.compose("inner", KeyValueTextInputFormat.class,
+            joinExpression = CompositeInputFormat.compose("inner", SequenceFileInputFormat.class,
                     tempInput1, tempInput2);
 
             keyExtractorLeft.waitForCompletion(verbose);
@@ -129,9 +134,6 @@ public class MergeJoin implements Join {
         }
 
         if (sort) {
-            hdfs.deleteOnExit(tempInputSorted1);
-            hdfs.deleteOnExit(tempInputSorted2);
-
             Path partitionFile = new Path("tmp_partitions");
 
             Configuration sortLeftConf = new Configuration();
@@ -146,18 +148,21 @@ public class MergeJoin implements Join {
                 // If the keys had to be extracted first use the newly created temp files as input
                 FileInputFormat.setInputPaths(sortLeft, tempInput1);
                 FileInputFormat.setInputPaths(sortRight, tempInput2);
+
+                sortLeft.setInputFormatClass(SequenceFileInputFormat.class);
+                sortRight.setInputFormatClass(SequenceFileInputFormat.class);
             }
             else {
                 // Otherwise use the actual input files
                 FileInputFormat.setInputPaths(sortLeft, config.getInputs()[0]);
                 FileInputFormat.setInputPaths(sortRight, config.getInputs()[1]);
+
+                sortLeft.setInputFormatClass(KeyValueTextInputFormat.class);
+                sortRight.setInputFormatClass(KeyValueTextInputFormat.class);
             }
 
-            sortLeft.setInputFormatClass(KeyValueTextInputFormat.class);
-            sortRight.setInputFormatClass(KeyValueTextInputFormat.class);
-
-            sortLeft.setMapOutputKeyClass(Text.class);
-            sortRight.setMapOutputKeyClass(Text.class);
+            sortLeft.setMapOutputKeyClass(LongWritable.class);
+            sortRight.setMapOutputKeyClass(LongWritable.class);
 
             TotalOrderPartitioner.setPartitionFile(sortLeft.getConfiguration(), partitionFile);
             TotalOrderPartitioner.setPartitionFile(sortRight.getConfiguration(), partitionFile);
@@ -171,10 +176,13 @@ public class MergeJoin implements Join {
             FileOutputFormat.setOutputPath(sortLeft, tempInputSorted1);
             FileOutputFormat.setOutputPath(sortRight, tempInputSorted2);
 
+            sortLeft.setOutputFormatClass(SequenceFileOutputFormat.class);
+            sortRight.setOutputFormatClass(SequenceFileOutputFormat.class);
+
             // No mappers and reducers are set - we only need the shuffle phase and sorting
 
             // Set the merge join input to the newly created sorted temp files:
-            joinExpression = CompositeInputFormat.compose("inner", KeyValueTextInputFormat.class,
+            joinExpression = CompositeInputFormat.compose("inner", SequenceFileInputFormat.class,
                     tempInput1, tempInput2);
 
             sortLeft.waitForCompletion(verbose);
@@ -210,7 +218,14 @@ public class MergeJoin implements Join {
         mergeJob.setOutputKeyClass(Text.class);
         mergeJob.setOutputValueClass(Text.class);
 
-        return mergeJob.waitForCompletion(verbose);
+        boolean result = mergeJob.waitForCompletion(verbose);
+
+        hdfs.delete(tempInput1, true);
+        hdfs.delete(tempInput2, true);
+        hdfs.delete(tempInputSorted1, true);
+        hdfs.delete(tempInputSorted2, true);
+
+        return result;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
