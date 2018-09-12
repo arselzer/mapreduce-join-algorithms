@@ -25,7 +25,7 @@ public class BroadcastJoin implements Join {
         jobConf.setInt("index1", config.getIndices()[0]);
         jobConf.setInt("index2", config.getIndices()[1]);
 
-        job = Job.getInstance(jobConf, name == null ? "Hash com.alexselzer.mrjoins.Join" : name);
+        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
 
         job.setJarByClass(BroadcastJoin.class);
 
@@ -46,8 +46,8 @@ public class BroadcastJoin implements Join {
     }
 
     @Override
-    public Job getJob() {
-        return job;
+    public void init(JoinConfig config, String name, boolean extractKeys) throws IOException {
+        init(config, name, false);
     }
 
     public static class BroadcastJoinMapper extends Mapper<Object, Text, Text, Text>{
@@ -87,9 +87,19 @@ public class BroadcastJoin implements Join {
         }
     }
 
+    @Override
+    public Job getMergeJob() {
+        return job;
+    }
+
+    @Override
+    public boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException {
+        return job.waitForCompletion(true);
+    }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: joins.com.alexselzer.mrjoins.joins.HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
@@ -106,9 +116,9 @@ public class BroadcastJoin implements Join {
         JoinConfig config = new JoinConfig(inputs, indices, output);
 
         Join join = new BroadcastJoin();
-        join.init(config, "Broadcast com.alexselzer.mrjoins.Join");
+        join.init(config, "Broadcast Join");
 
-        Job job = join.getJob();
+        Job job = join.getMergeJob();
 
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }

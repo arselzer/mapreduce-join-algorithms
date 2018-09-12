@@ -49,10 +49,11 @@ public class JoinSimulation {
         Join join = new MergeJoin();
         join.init(config, "Hash com.alexselzer.mrjoins.Join");
 
-        Job job = join.getJob();
+        //Job job = join.getMergeJob();
 
         long startTime = System.nanoTime();
-        boolean success = job.waitForCompletion(true);
+        boolean success = join.run(true);
+        //boolean success = job.waitForCompletion(true);
         long endTime = System.nanoTime();
 
         long diff = endTime - startTime;
