@@ -12,7 +12,6 @@ public class SortMergeJoin implements Join {
 
     }
 
-    @Override
     public void init(JoinConfig config, String name, boolean extractKeys) throws IOException {
 
     }

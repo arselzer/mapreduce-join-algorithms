@@ -128,7 +128,6 @@ public class HashJoin implements Join {
         job.setOutputValueClass(Text.class);
     }
 
-    @Override
     public void init(JoinConfig config, String name, boolean extractKeys) throws IOException {
         init(config, name, false);
     }

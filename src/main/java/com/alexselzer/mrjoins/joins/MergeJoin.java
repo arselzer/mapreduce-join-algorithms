@@ -29,7 +29,6 @@ public class MergeJoin implements Join {
         init(config, name, true);
     }
 
-    @Override
     public void init(JoinConfig config, String name, boolean extractKeys) throws IOException {
         this.extractKeys = extractKeys;
 
