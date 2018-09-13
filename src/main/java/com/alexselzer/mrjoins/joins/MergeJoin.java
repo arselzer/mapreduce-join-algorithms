@@ -93,9 +93,9 @@ public class MergeJoin implements Join {
             keyExtractorRightConf.setInt("index", config.getIndices()[1]);
 
             keyExtractorLeft = Job.getInstance(keyExtractorLeftConf,
-                    (name == null ? JOB_NAME : name) + " key extractor left");
+                    (name == null ? JOB_NAME : name) + " - (stage1:key extractor left)");
             keyExtractorRight = Job.getInstance(keyExtractorRightConf,
-                    (name == null ? JOB_NAME : name) + " key extractor right");
+                    (name == null ? JOB_NAME : name) + " - (stage1:key extractor right)");
 
             keyExtractorLeft.setJarByClass(KeyExtractor.class);
             keyExtractorRight.setJarByClass(KeyExtractor.class);
@@ -140,9 +140,9 @@ public class MergeJoin implements Join {
             Configuration sortRightConf = new Configuration();
 
             sortLeft = Job.getInstance(sortLeftConf,
-                    (name == null ? JOB_NAME : name) + " sort left");
+                    (name == null ? JOB_NAME : name) + " - (stage1:sort left)");
             sortRight = Job.getInstance(sortRightConf,
-                    (name == null ? JOB_NAME : name) + " sort right");
+                    (name == null ? JOB_NAME : name) + " - (stage1:sort right)");
 
             if (extractKeys) {
                 // If the keys had to be extracted first use the newly created temp files as input
@@ -163,6 +163,9 @@ public class MergeJoin implements Join {
 
             sortLeft.setSortComparatorClass(LongWritable.Comparator.class);
             sortRight.setSortComparatorClass(LongWritable.Comparator.class);
+
+            sortLeft.setNumReduceTasks(config.getNumReducers());
+            sortRight.setNumReduceTasks(config.getNumReducers());
 
             sortLeft.setMapOutputKeyClass(LongWritable.class);
             sortRight.setMapOutputKeyClass(LongWritable.class);
@@ -206,7 +209,7 @@ public class MergeJoin implements Join {
         // is an equal number if splits for both tables being joined
         mergeJobConf.set(FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE + "");
 
-        mergeJob = Job.getInstance(mergeJobConf, name == null ? "Merge Join" : name);
+        mergeJob = Job.getInstance(mergeJobConf, (name == null ? JOB_NAME : name) + " - (stage3:merge)");
 
         mergeJob.setJarByClass(MergeJoin.class);
 

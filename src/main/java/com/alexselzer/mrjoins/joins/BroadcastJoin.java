@@ -43,6 +43,8 @@ public class BroadcastJoin implements Join {
 
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+
+        job.setNumReduceTasks(config.getNumReducers());
     }
 
     public void init(JoinConfig config, String name, boolean extractKeys) throws IOException {
