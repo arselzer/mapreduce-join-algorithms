@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HashJoin implements Join {
+public class RepartitionJoin implements Join {
     private Job job;
 
     public static class HashJoinLeftMapper extends Mapper<Object, Text, JoinTuple, JoinTuple>{
@@ -108,9 +108,9 @@ public class HashJoin implements Join {
         jobConf.setInt("index1", config.getIndices()[0]);
         jobConf.setInt("index2", config.getIndices()[1]);
 
-        job = Job.getInstance(jobConf, name == null ? "Hash Join" : name);
+        job = Job.getInstance(jobConf, name == null ? "repartition-join" : name);
 
-        job.setJarByClass(HashJoin.class);
+        job.setJarByClass(RepartitionJoin.class);
 
         MultipleInputs.addInputPath(job, config.getInputs()[0], TextInputFormat.class, HashJoinLeftMapper.class);
         MultipleInputs.addInputPath(job, config.getInputs()[1], TextInputFormat.class, HashJoinRightMapper.class);
@@ -142,7 +142,7 @@ public class HashJoin implements Join {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: RepartitionJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
@@ -158,8 +158,8 @@ public class HashJoin implements Join {
 
         JoinConfig config = new JoinConfig(inputs, indices, output, 1);
 
-        Join join = new HashJoin();
-        join.init(config, "Hash Join");
+        Join join = new RepartitionJoin();
+        join.init(config, "Repartition Join");
 
         join.run(true);
     }

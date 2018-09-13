@@ -1,16 +1,17 @@
 package com.alexselzer.mrjoins;
 
 import com.alexselzer.mrjoins.joins.BroadcastJoin;
-import com.alexselzer.mrjoins.joins.HashJoin;
+import com.alexselzer.mrjoins.joins.RepartitionJoin;
 import com.alexselzer.mrjoins.joins.MergeJoin;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
 
-import java.io.IOException;
+import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
 public class JoinSimulation {
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
@@ -19,6 +20,12 @@ public class JoinSimulation {
         int rowsStep = Integer.parseInt(args[0]);
         int steps = Integer.parseInt(args[1]);
         int repetitions = Integer.parseInt(args[2]);
+        int nReducers = 4;
+
+        PrintWriter results = new PrintWriter(new FileOutputStream("results " +
+                (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
+
+        results.println("rows,repetitions,reducers,t_repartition,t_broadcast,t_merge");
 
         for (int i = 1; i <= steps; i++) {
             int nRows = i * rowsStep;
@@ -26,6 +33,8 @@ public class JoinSimulation {
             DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
                     Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
                             new DataGenerator.Attribute(80)), repetitions);
+
+            results.write(nRows + "," + repetitions + "," + nReducers);
 
             String meta = "(rows=" + nRows + ",repetitions=" + 2 + ")";
 
@@ -61,14 +70,16 @@ public class JoinSimulation {
             Path[] inputs = {input1, input2};
             Integer[] indices = {index1, index2};
 
-            JoinConfig config = new JoinConfig(inputs, indices, output, 4);
+            JoinConfig config = new JoinConfig(inputs, indices, output, nReducers);
 
             /* Run the hash join */
 
-            Join join = new HashJoin();
-            join.init(config, "hash-join" + meta);
+            Join join = new RepartitionJoin();
+            join.init(config, "repartition-join" + meta);
 
-            time(join);
+            long timeRepartition = time(join);
+
+            results.write("," + timeRepartition);
 
             hdfs.delete(output, true);
 
@@ -77,7 +88,9 @@ public class JoinSimulation {
             join = new BroadcastJoin();
             join.init(config, "broadcast-join" + meta);
 
-            time(join);
+            long timeBroadcast = time(join);
+
+            results.write("," + timeBroadcast);
 
             hdfs.delete(output, true);
 
@@ -86,13 +99,17 @@ public class JoinSimulation {
             join = new MergeJoin();
             join.init(config, "merge-join" + meta);
 
-            time(join);
+            long timeMerge = time(join);
+
+            results.write("," + timeMerge + "\n");
 
             hdfs.delete(output, true);
 
             hdfs.delete(input1, true);
             hdfs.delete(input2, true);
         }
+
+        results.close();
 
         System.exit(0);
     }

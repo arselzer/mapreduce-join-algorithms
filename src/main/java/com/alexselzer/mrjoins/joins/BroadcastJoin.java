@@ -95,7 +95,7 @@ public class BroadcastJoin implements Join {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         if (args.length != 5) {
-            System.err.println("Usage: HashJoin.jar [input1] [index1] [input2] [index2] [output]");
+            System.err.println("Usage: RepartitionJoin.jar [input1] [index1] [input2] [index2] [output]");
             System.exit(1);
         }
 
