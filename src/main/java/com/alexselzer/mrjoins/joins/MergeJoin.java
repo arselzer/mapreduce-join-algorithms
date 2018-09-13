@@ -161,13 +161,16 @@ public class MergeJoin implements Join {
                 sortRight.setInputFormatClass(KeyValueTextInputFormat.class);
             }
 
+            sortLeft.setSortComparatorClass(LongWritable.Comparator.class);
+            sortRight.setSortComparatorClass(LongWritable.Comparator.class);
+
             sortLeft.setMapOutputKeyClass(LongWritable.class);
             sortRight.setMapOutputKeyClass(LongWritable.class);
 
             TotalOrderPartitioner.setPartitionFile(sortLeft.getConfiguration(), partitionFile);
             TotalOrderPartitioner.setPartitionFile(sortRight.getConfiguration(), partitionFile);
 
-            InputSampler.Sampler<Text, Text> sampler = new InputSampler.RandomSampler<>(0.01, 1000, 100);
+            InputSampler.Sampler<IntWritable, Text> sampler = new InputSampler.RandomSampler<>(0.01, 2000, 1000);
             InputSampler.writePartitionFile(sortLeft, sampler);
 
             sortLeft.setPartitionerClass(TotalOrderPartitioner.class);
@@ -183,7 +186,7 @@ public class MergeJoin implements Join {
 
             // Set the merge join input to the newly created sorted temp files:
             joinExpression = CompositeInputFormat.compose("inner", SequenceFileInputFormat.class,
-                    tempInput1, tempInput2);
+                    tempInputSorted1, tempInputSorted2);
 
             sortLeft.waitForCompletion(verbose);
             sortRight.waitForCompletion(verbose);
@@ -191,8 +194,10 @@ public class MergeJoin implements Join {
 
         Configuration mergeJobConf = new Configuration();
 
+        System.out.printf("Join expression: %s\n", joinExpression);
+
         mergeJobConf.set(CompositeInputFormat.JOIN_EXPR, joinExpression);
-        //conf.set(CompositeInputFormat.JOIN_COMPARATOR, IntWritable.Comparator.class.getName());
+        mergeJobConf.set(CompositeInputFormat.JOIN_COMPARATOR, LongWritable.Comparator.class.getName());
 
         // Set the key - value separator (default = tab)
         mergeJobConf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator", SEPARATOR);
@@ -212,7 +217,7 @@ public class MergeJoin implements Join {
         mergeJob.setMapperClass(MergeJoinMapper.class);
         mergeJob.setNumReduceTasks(0);
 
-        mergeJob.setMapOutputKeyClass(Text.class);
+        mergeJob.setMapOutputKeyClass(LongWritable.class);
         mergeJob.setMapOutputValueClass(Text.class);
 
         mergeJob.setOutputKeyClass(Text.class);
@@ -243,7 +248,7 @@ public class MergeJoin implements Join {
         Path[] inputs = {input1, input2};
         Integer[] indices = {index1, index2};
 
-        JoinConfig config = new JoinConfig(inputs, indices, output);
+        JoinConfig config = new JoinConfig(inputs, indices, output, 1);
 
         Join join = new MergeJoin();
         join.init(config, JOB_NAME);

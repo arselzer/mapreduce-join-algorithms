@@ -154,7 +154,7 @@ public class HashJoin implements Join {
         Path[] inputs = {input1, input2};
         Integer[] indices = {index1, index2};
 
-        JoinConfig config = new JoinConfig(inputs, indices, output);
+        JoinConfig config = new JoinConfig(inputs, indices, output, 1);
 
         Join join = new HashJoin();
         join.init(config, "Hash Join");

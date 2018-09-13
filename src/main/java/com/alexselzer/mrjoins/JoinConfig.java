@@ -6,11 +6,13 @@ public class JoinConfig {
     private Path[] inputs;
     private Integer[] indices;
     private Path output;
+    private int numReducers = 1;
 
-    public JoinConfig(Path[] inputs, Integer[] indices, Path output) {
+    public JoinConfig(Path[] inputs, Integer[] indices, Path output, int numReducers) {
         this.inputs = inputs;
         this.indices = indices;
         this.output = output;
+        this.numReducers = numReducers;
     }
 
     public Path[] getInputs() {
@@ -35,5 +37,13 @@ public class JoinConfig {
 
     public void setOutput(Path output) {
         this.output = output;
+    }
+
+    public int getNumReducers() {
+        return numReducers;
+    }
+
+    public void setNumReducers(int numReducers) {
+        this.numReducers = numReducers;
     }
 }

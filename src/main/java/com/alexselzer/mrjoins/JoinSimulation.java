@@ -44,7 +44,7 @@ public class JoinSimulation {
         Path[] inputs = {input1, input2};
         Integer[] indices = {index1, index2};
 
-        JoinConfig config = new JoinConfig(inputs, indices, output);
+        JoinConfig config = new JoinConfig(inputs, indices, output, 4);
 
         Join join = new MergeJoin();
         join.init(config, "Hash com.alexselzer.mrjoins.Join");
