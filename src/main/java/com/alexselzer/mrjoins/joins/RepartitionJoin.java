@@ -27,7 +27,7 @@ public class RepartitionJoin implements Join {
             //System.out.printf("Mapping %s (left)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index1", 0)];
             context.write(new JoinTuple(0, new Text(joinAttr)), new JoinTuple(0, text));
-            //System.out.printf("Wrote %s\n",  new com.alexselzer.mrjoins.JoinTuple(0, text));
+            //System.out.printf("Wrote %s\n",  new JoinTuple(0, text));
         }
     }
 
@@ -36,7 +36,7 @@ public class RepartitionJoin implements Join {
             //System.out.printf("Mapping %s (right)\n", text);
             String joinAttr = text.toString().split(",")[context.getConfiguration().getInt("index2", 0)];
             context.write(new JoinTuple(1, new Text(joinAttr)), new JoinTuple(1, text));
-            //System.out.printf("Wrote %s\n",  new com.alexselzer.mrjoins.JoinTuple(1, text));
+            //System.out.printf("Wrote %s\n",  new JoinTuple(1, text));
         }
     }
 
@@ -46,7 +46,7 @@ public class RepartitionJoin implements Join {
             List<JoinTuple> tuples = new ArrayList<>();
             for (JoinTuple t : values) {
                 // https://cornercases.wordpress.com/2011/08/18/hadoop-object-reuse-pitfall-all-my-reducer-values-are-the-same/
-                // Clone the com.alexselzer.mrjoins.JoinTuple object and its Writables because otherwise all values will be the same...
+                // Clone the JoinTuple object and its Writables because otherwise all values will be the same...
                 tuples.add(new JoinTuple(t));
                 //System.out.printf("Got %s\n", t);
             }

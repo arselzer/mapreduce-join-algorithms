@@ -26,7 +26,7 @@ public class JoinSimulation {
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
                 (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
 
-        results.println("rows,repetitions,reducers,t_repartition,t_broadcast,t_merge");
+        results.println("rows,repetitions,reducers,skew,t_repartition,t_broadcast,t_merge");
 
         for (int i = 1; i <= steps; i++) {
             int nRows = i * rowsStep;
@@ -35,9 +35,9 @@ public class JoinSimulation {
                     Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
                             new DataGenerator.Attribute(80)), repetitions);
 
-            results.write(nRows + "," + repetitions + "," + nReducers);
+            results.write(nRows + "," + repetitions + "," + zipfSkew + "," + nReducers);
 
-            String meta = "(rows=" + nRows + ",repetitions=" + 2 + ")";
+            String meta = "(rows=" + nRows + ",repetitions=" + repetitions + ",skew=" + zipfSkew + ")";
 
             Path input1 = new Path("t1_" + nRows + ".csv");
             Path input2 = new Path("t2_" + nRows + ".csv");
