@@ -20,7 +20,8 @@ public class JoinSimulation {
         int rowsStep = Integer.parseInt(args[0]);
         int steps = Integer.parseInt(args[1]);
         int repetitions = Integer.parseInt(args[2]);
-        int nReducers = 4;
+        int nReducers = Integer.parseInt(args[3]);
+        double zipfSkew = 0.5;
 
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
                 (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
@@ -45,7 +46,7 @@ public class JoinSimulation {
             FSDataOutputStream out2 = hdfs.create(input2, true);
 
             long startTime = System.nanoTime();
-            dg.write(out1, out2);
+            dg.writeZipf(out1, out2, zipfSkew);
             long endTime = System.nanoTime();
 
             long diff = endTime - startTime;
