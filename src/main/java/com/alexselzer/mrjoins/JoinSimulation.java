@@ -26,7 +26,7 @@ public class JoinSimulation {
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
                 (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
 
-        results.println("rows,repetitions,reducers,skew,t_repartition,t_broadcast,t_merge");
+        results.println("rows,repetitions,reducers,skew,t_repartition,t_broadcast,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");
 
         for (int i = 1; i <= steps; i++) {
             int nRows = i * rowsStep;
@@ -78,9 +78,9 @@ public class JoinSimulation {
             Join join = new RepartitionJoin();
             join.init(config, "repartition-join" + meta);
 
-            long timeRepartition = time(join);
+            join.run(true);
 
-            results.write("," + timeRepartition);
+            results.write("," + join.getJoinStats().getJobTimes()[0]);
 
             hdfs.delete(output, true);
 
@@ -89,9 +89,9 @@ public class JoinSimulation {
             join = new BroadcastJoin();
             join.init(config, "broadcast-join" + meta);
 
-            long timeBroadcast = time(join);
+            join.run(true);
 
-            results.write("," + timeBroadcast);
+            results.write("," + join.getJoinStats().getJobTimes()[0]);
 
             hdfs.delete(output, true);
 
@@ -100,9 +100,11 @@ public class JoinSimulation {
             join = new MergeJoin();
             join.init(config, "merge-join" + meta);
 
-            long timeMerge = time(join);
+            join.run(true);
 
-            results.write("," + timeMerge + "\n");
+            long[] t = join.getJoinStats().getJobTimes();
+            results.write("," + t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + ","
+                    + (t[0] + t[1] + t[2] + t[3] + t[4]) + "\n");
 
             hdfs.delete(output, true);
 
@@ -113,17 +115,5 @@ public class JoinSimulation {
         results.close();
 
         System.exit(0);
-    }
-
-    private static long time(Join join) throws InterruptedException, IOException, ClassNotFoundException {
-        long startTime = System.nanoTime();
-        boolean success = join.run(true);
-        long endTime = System.nanoTime();
-
-        long diff = endTime - startTime;
-
-        System.out.printf("Time taken: %.3f ms\n", diff / 1000000.0);
-
-        return diff;
     }
 }

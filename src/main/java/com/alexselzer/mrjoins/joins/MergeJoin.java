@@ -2,6 +2,8 @@ package com.alexselzer.mrjoins.joins;
 
 import com.alexselzer.mrjoins.Join;
 import com.alexselzer.mrjoins.JoinConfig;
+import com.alexselzer.mrjoins.JoinStats;
+import com.alexselzer.mrjoins.utils.JobUtils;
 import com.alexselzer.mrjoins.utils.KeyExtractor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +47,8 @@ public class MergeJoin implements Join {
     private JoinConfig config;
     private String name;
 
+    private JoinStats stats = new JoinStats();
+
     @Override
     public void init(JoinConfig config, String name) throws IOException, ClassNotFoundException, InterruptedException {
         init(config, name, true, true);
@@ -85,6 +89,8 @@ public class MergeJoin implements Join {
 
         Path tempInputSorted1 = new Path("temp_sorted_" + config.getInputs()[0].getName());
         Path tempInputSorted2 = new Path("temp_sorted_" + config.getInputs()[1].getName());
+
+        long[] jobTimes = new long[6];
 
         if (extractKeys) {
             Configuration keyExtractorLeftConf = new Configuration();
@@ -129,8 +135,8 @@ public class MergeJoin implements Join {
             joinExpression = CompositeInputFormat.compose("inner", SequenceFileInputFormat.class,
                     tempInput1, tempInput2);
 
-            keyExtractorLeft.waitForCompletion(verbose);
-            keyExtractorRight.waitForCompletion(verbose);
+            jobTimes[0] = JobUtils.time(keyExtractorLeft, verbose);
+            jobTimes[1] = JobUtils.time(keyExtractorRight, verbose);
         }
 
         if (sort) {
@@ -191,8 +197,8 @@ public class MergeJoin implements Join {
             joinExpression = CompositeInputFormat.compose("inner", SequenceFileInputFormat.class,
                     tempInputSorted1, tempInputSorted2);
 
-            sortLeft.waitForCompletion(verbose);
-            sortRight.waitForCompletion(verbose);
+            jobTimes[2] = JobUtils.time(sortLeft, verbose);
+            jobTimes[3] = JobUtils.time(sortRight, verbose);
         }
 
         Configuration mergeJobConf = new Configuration();
@@ -226,14 +232,21 @@ public class MergeJoin implements Join {
         mergeJob.setOutputKeyClass(Text.class);
         mergeJob.setOutputValueClass(Text.class);
 
-        boolean result = mergeJob.waitForCompletion(verbose);
+        jobTimes[4] = JobUtils.time(mergeJob, verbose);
 
         hdfs.delete(tempInput1, true);
         hdfs.delete(tempInput2, true);
         hdfs.delete(tempInputSorted1, true);
         hdfs.delete(tempInputSorted2, true);
 
-        return result;
+        stats.setJobTimes(jobTimes);
+        // If the value is 0 the job has failed
+        return jobTimes[4] != 0;
+    }
+
+    @Override
+    public JoinStats getJoinStats() {
+        return stats;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {

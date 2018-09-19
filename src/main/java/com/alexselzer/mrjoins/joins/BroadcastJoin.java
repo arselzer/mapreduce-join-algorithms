@@ -2,6 +2,8 @@ package com.alexselzer.mrjoins.joins;
 
 import com.alexselzer.mrjoins.Join;
 import com.alexselzer.mrjoins.JoinConfig;
+import com.alexselzer.mrjoins.JoinStats;
+import com.alexselzer.mrjoins.utils.JobUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -18,6 +20,8 @@ import java.util.Map;
 
 public class BroadcastJoin implements Join {
     private Job job;
+
+    private JoinStats stats = new JoinStats();
 
     @Override
     public void init(JoinConfig config, String name) throws IOException {
@@ -90,7 +94,16 @@ public class BroadcastJoin implements Join {
 
     @Override
     public boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException {
-        return job.waitForCompletion(true);
+        long time = JobUtils.time(job, verbose);
+
+        stats.setJobTimes(new long[] {time});
+
+        return !(time == 0);
+    }
+
+    @Override
+    public JoinStats getJoinStats() {
+        return stats;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {

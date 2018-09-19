@@ -2,7 +2,9 @@ package com.alexselzer.mrjoins.joins;
 
 import com.alexselzer.mrjoins.Join;
 import com.alexselzer.mrjoins.JoinConfig;
+import com.alexselzer.mrjoins.JoinStats;
 import com.alexselzer.mrjoins.JoinTuple;
+import com.alexselzer.mrjoins.utils.JobUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -21,6 +23,7 @@ import java.util.List;
 
 public class RepartitionJoin implements Join {
     private Job job;
+    private JoinStats stats = new JoinStats();
 
     public static class HashJoinLeftMapper extends Mapper<Object, Text, JoinTuple, JoinTuple>{
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {
@@ -136,7 +139,16 @@ public class RepartitionJoin implements Join {
 
     @Override
     public boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException {
-        return job.waitForCompletion(true);
+        long time = JobUtils.time(job, verbose);
+
+        stats.setJobTimes(new long[] {time});
+
+        return !(time == 0);
+    }
+
+    @Override
+    public JoinStats getJoinStats() {
+        return stats;
     }
 
 

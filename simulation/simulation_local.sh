@@ -1,3 +1,3 @@
 #!/bin/sh
 
-hadoop jar ../target/mapreduce-join-comparison-1.0-SNAPSHOT.jar com.alexselzer.mrjoins.JoinSimulation 2000000 2 100 100
+hadoop jar ../target/mapreduce-join-comparison-1.0-SNAPSHOT.jar com.alexselzer.mrjoins.JoinSimulation 500000 4 100 4

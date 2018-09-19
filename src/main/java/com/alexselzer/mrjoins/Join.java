@@ -9,4 +9,6 @@ public interface Join {
     void init(JoinConfig config, String name) throws IOException, ClassNotFoundException, InterruptedException;
 
     boolean run(boolean verbose) throws InterruptedException, IOException, ClassNotFoundException;
+
+    JoinStats getJoinStats();
 }
