@@ -180,7 +180,7 @@ public class MergeJoin implements Join {
             TotalOrderPartitioner.setPartitionFile(sortRight.getConfiguration(), partitionFile);
 
             InputSampler.Sampler<IntWritable, Text> sampler = new InputSampler.RandomSampler<>(0.01, 2000, 1000);
-            InputSampler.writePartitionFile(sortLeft, sampler);
+            InputSampler.writePartitionFile(sortRight, sampler);
 
             sortLeft.setPartitionerClass(TotalOrderPartitioner.class);
             sortRight.setPartitionerClass(TotalOrderPartitioner.class);

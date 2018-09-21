@@ -27,7 +27,7 @@ public class JoinSimulationSpeedup {
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
                 (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
 
-        results.println("rows,repetitions,reducers,skew,map_records_1,reduce_records_1,t_repartition,map_records_2,t_broadcast,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,,map_records_3,t_merge");
+        results.println("rows,repetitions,reducers,skew,map_records_1,reduce_records_1,t_repartition,map_records_2,t_broadcast,map_records_3,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");
 
         for (int i = 1; i <= steps; i++) {
             int nRows = i * rowsStep;
@@ -118,6 +118,8 @@ public class JoinSimulationSpeedup {
 
             hdfs.delete(input1, true);
             hdfs.delete(input2, true);
+
+            results.flush();
         }
 
         results.close();

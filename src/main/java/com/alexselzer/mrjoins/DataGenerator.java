@@ -87,6 +87,46 @@ public class DataGenerator {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
 
+        Integer[] keys = new Integer[nRows];
+        for (int i = 0; i < nRows; i++) {
+            keys[i] = i;
+        }
+
+        List<Integer> keysList = new ArrayList<Integer>(Arrays.asList(keys));
+        Collections.shuffle(keysList);
+
+        for (int i = 0; i < nRows; i++) {
+            String row = "" + (keysList.get(i));
+
+            for (Attribute a : attributes) {
+                row += "," + a.generate();
+            }
+
+            row += "\n";
+
+            t1writer.write(row);
+        }
+
+        for (int i = 0; i < nRows; i++) {
+            String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) nRows / keyRepetitions);
+
+            for (Attribute a : attributes) {
+                row += "," + a.generate();
+            }
+
+            row += "\n";
+
+            t2writer.write(row);
+        }
+
+        t1writer.close();
+        t2writer.close();
+    }
+
+    public void writeZipfBoth(DataOutputStream file1, DataOutputStream file2, double s) {
+        PrintWriter t1writer = new PrintWriter(file1);
+        PrintWriter t2writer = new PrintWriter(file2);
+
         for (int i = 0; i < nRows; i++) {
             String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) nRows / keyRepetitions);
 
@@ -112,7 +152,7 @@ public class DataGenerator {
         int rowsStep = 1000000;
         int repetitions = 10;
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 6; i++) {
             int nRows = i * rowsStep;
 
             DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
