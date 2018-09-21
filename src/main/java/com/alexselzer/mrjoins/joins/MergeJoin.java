@@ -240,6 +240,7 @@ public class MergeJoin implements Join {
         hdfs.delete(tempInputSorted2, true);
 
         stats.setJobTimes(jobTimes);
+        stats.setCounters(mergeJob.getCounters());
         // If the value is 0 the job has failed
         return jobTimes[4] != 0;
     }

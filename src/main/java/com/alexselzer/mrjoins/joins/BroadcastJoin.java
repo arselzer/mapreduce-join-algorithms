@@ -97,6 +97,7 @@ public class BroadcastJoin implements Join {
         long time = JobUtils.time(job, verbose);
 
         stats.setJobTimes(new long[] {time});
+        stats.setCounters(job.getCounters());
 
         return !(time == 0);
     }

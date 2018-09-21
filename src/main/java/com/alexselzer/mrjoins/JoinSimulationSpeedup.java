@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
-public class JoinSimulation {
+public class JoinSimulationSpeedup {
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         FileSystem hdfs = FileSystem.get(new Configuration());
 
