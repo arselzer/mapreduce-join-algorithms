@@ -7,6 +7,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.TaskCounter;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -26,7 +27,7 @@ public class JoinSimulationSpeedup {
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
                 (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
 
-        results.println("rows,repetitions,reducers,skew,t_repartition,t_broadcast,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");
+        results.println("rows,repetitions,reducers,skew,map_records_1,reduce_records_1,t_repartition,map_records_2,t_broadcast,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,,map_records_3,t_merge");
 
         for (int i = 1; i <= steps; i++) {
             int nRows = i * rowsStep;
@@ -35,7 +36,7 @@ public class JoinSimulationSpeedup {
                     Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
                             new DataGenerator.Attribute(80)), repetitions);
 
-            results.write(nRows + "," + repetitions + "," + zipfSkew + "," + nReducers);
+            results.write(nRows + "," + repetitions + "," + nReducers + "," + zipfSkew);
 
             String meta = "(rows=" + nRows + ",repetitions=" + repetitions + ",skew=" + zipfSkew + ")";
 
@@ -80,7 +81,10 @@ public class JoinSimulationSpeedup {
 
             join.run(true);
 
-            results.write("," + join.getJoinStats().getJobTimes()[0]);
+            long mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+            long reduceRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS).getValue();
+
+            results.write("," + mapRecords + "," + reduceRecords + "," + join.getJoinStats().getJobTimes()[0]);
 
             hdfs.delete(output, true);
 
@@ -91,7 +95,9 @@ public class JoinSimulationSpeedup {
 
             join.run(true);
 
-            results.write("," + join.getJoinStats().getJobTimes()[0]);
+            mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+
+            results.write("," + mapRecords + "," + join.getJoinStats().getJobTimes()[0]);
 
             hdfs.delete(output, true);
 
@@ -102,8 +108,10 @@ public class JoinSimulationSpeedup {
 
             join.run(true);
 
+            mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+
             long[] t = join.getJoinStats().getJobTimes();
-            results.write("," + t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + ","
+            results.write("," + mapRecords + "," + t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + ","
                     + (t[0] + t[1] + t[2] + t[3] + t[4]) + "\n");
 
             hdfs.delete(output, true);
