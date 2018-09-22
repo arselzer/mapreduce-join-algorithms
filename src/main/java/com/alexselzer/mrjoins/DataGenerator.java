@@ -87,15 +87,15 @@ public class DataGenerator {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
 
-        Integer[] keys = new Integer[nRows];
-        for (int i = 0; i < nRows; i++) {
+        Integer[] keys = new Integer[nRows / keyRepetitions];
+        for (int i = 0; i < nRows / keyRepetitions; i++) {
             keys[i] = i;
         }
 
         List<Integer> keysList = new ArrayList<Integer>(Arrays.asList(keys));
         Collections.shuffle(keysList);
 
-        for (int i = 0; i < nRows; i++) {
+        for (int i = 0; i < nRows / keyRepetitions; i++) {
             String row = "" + (keysList.get(i));
 
             for (Attribute a : attributes) {

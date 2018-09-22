@@ -140,6 +140,8 @@ public class RepartitionJoin implements Join {
 
         stats.setJobTimes(new long[] {time});
         stats.setCounters(job.getCounters());
+        stats.setMapTasks(job.getTaskReports(TaskType.MAP));
+        stats.setReduceTasks(job.getTaskReports(TaskType.REDUCE));
 
         return !(time == 0);
     }

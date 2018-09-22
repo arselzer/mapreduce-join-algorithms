@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
@@ -98,6 +99,7 @@ public class BroadcastJoin implements Join {
 
         stats.setJobTimes(new long[] {time});
         stats.setCounters(job.getCounters());
+        stats.setMapTasks(job.getTaskReports(TaskType.MAP));
 
         return !(time == 0);
     }

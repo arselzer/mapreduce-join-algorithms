@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.TaskReport;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,6 +25,9 @@ public class JoinSimulationSkew {
         int steps = Integer.parseInt(args[1]);
         int repetitions = Integer.parseInt(args[2]);
         int nReducers = Integer.parseInt(args[3]);
+        boolean doubleSkew = false;
+        if (args.length > 4) doubleSkew = Integer.parseInt(args[4]) == 1;
+
         double zipfSkew = 0.5;
 
         PrintWriter results = new PrintWriter(new FileOutputStream("results " +
@@ -49,7 +53,12 @@ public class JoinSimulationSkew {
             FSDataOutputStream out2 = hdfs.create(input2, true);
 
             long startTime = System.nanoTime();
-            dg.writeZipf(out1, out2, zipfSkew);
+            if (doubleSkew) {
+                dg.writeZipfBoth(out1, out2, zipfSkew);
+            }
+            else {
+                dg.writeZipf(out1, out2, zipfSkew);
+            }
             long endTime = System.nanoTime();
 
             long diff = endTime - startTime;

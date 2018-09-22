@@ -15,6 +15,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat;
@@ -241,6 +242,7 @@ public class MergeJoin implements Join {
 
         stats.setJobTimes(jobTimes);
         stats.setCounters(mergeJob.getCounters());
+        stats.setMapTasks(mergeJob.getTaskReports(TaskType.MAP));
         // If the value is 0 the job has failed
         return jobTimes[4] != 0;
     }
