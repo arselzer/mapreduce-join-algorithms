@@ -13,6 +13,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskReport;
 
+import org.apache.commons.cli.*;
+
 import java.io.*;
 import java.text.SimpleDateFormat;
 
@@ -83,15 +85,15 @@ public class JoinSimulation {
     }
 
     private static void run(PrintWriter results, boolean repartitionJoin, boolean broadcastJoin, boolean mergeJoin,
-                              int nRows, int repetitions, int nReducers, double zipfSkew) throws IOException, ClassNotFoundException, InterruptedException {
+                              long nRows, long uniqueValues, int nReducers, double zipfSkew, boolean doubleSkew) throws IOException, ClassNotFoundException, InterruptedException {
 
         DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
                 Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
-                        new DataGenerator.Attribute(80)), repetitions);
+                        new DataGenerator.Attribute(80)), uniqueValues);
 
-        results.write(nRows + "," + repetitions + "," + nReducers + "," + zipfSkew);
+        results.write(nRows + "," + uniqueValues + "," + nReducers + "," + zipfSkew);
 
-        String meta = "(rows=" + nRows + ",repetitions=" + repetitions + ",skew=" + zipfSkew + ")";
+        String meta = "(rows=" + nRows + ",N=" + uniqueValues + ",skew=" + zipfSkew + ",doubleSkew=" + doubleSkew + ")";
 
         Path input1 = new Path("t1_" + nRows + ".csv");
         Path input2 = new Path("t2_" + nRows + ".csv");
@@ -100,12 +102,17 @@ public class JoinSimulation {
         FSDataOutputStream out2 = hdfs.create(input2, true);
 
         long startTime = System.nanoTime();
-        dg.writeZipf(out1, out2, zipfSkew);
+        if (!doubleSkew) {
+            dg.writeZipf(out1, out2, zipfSkew);
+        }
+        else {
+            dg.writeZipfBoth(out1, out2, zipfSkew);
+        }
         long endTime = System.nanoTime();
 
         long diff = endTime - startTime;
 
-        System.out.printf("Data generated: %.3f ms\n", diff / 1000000.0);
+        System.out.printf("Data generated (%d rows): %.3f ms\n", nRows, diff / 1000000.0);
 
         out1.close();
         out2.close();
@@ -132,6 +139,8 @@ public class JoinSimulation {
         Join join = new RepartitionJoin();
         join.init(config, "repartition-join" + meta);
 
+        System.out.printf("Running %s", "repartition-join" + meta);
+
         join.run(true);
 
         long mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
@@ -149,25 +158,36 @@ public class JoinSimulation {
 
         /* Run the broadcast join */
 
-        join = new BroadcastJoin();
-        join.init(config, "broadcast-join" + meta);
+        if (broadcastJoin) {
 
-        join.run(true);
+            join = new BroadcastJoin();
+            join.init(config, "broadcast-join" + meta);
 
-        mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+            System.out.printf("Running %s", "broadcast-join" + meta);
 
-        mapTimes = getTaskTimes(join.getJoinStats().getMapTasks());
+            join.run(true);
 
-        results.write("," + mapRecords + "," +
-                joinList(mapTimes, ";") + "," + calcMedian(mapTimes) + "," + calcMean(mapTimes) + "," + calcMax(mapTimes) + "," +
-                join.getJoinStats().getJobTimes()[0]);
+            mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
 
-        hdfs.delete(output, true);
+            mapTimes = getTaskTimes(join.getJoinStats().getMapTasks());
+
+            results.write("," + mapRecords + "," +
+                    joinList(mapTimes, ";") + "," + calcMedian(mapTimes) + "," + calcMean(mapTimes) + "," + calcMax(mapTimes) + "," +
+                    join.getJoinStats().getJobTimes()[0]);
+
+            hdfs.delete(output, true);
+
+        }
+        else {
+            results.write(",,,,,,");
+        }
 
         /* Run the merge join */
 
         join = new MergeJoin();
         join.init(config, "merge-join" + meta);
+
+        System.out.printf("Running %s", "merge-join" + meta);
 
         join.run(true);
 
@@ -189,27 +209,89 @@ public class JoinSimulation {
         results.flush();
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException, ParseException {
         hdfs = FileSystem.get(new Configuration());
 
-        int rowsStep = Integer.parseInt(args[0]);
-        int steps = Integer.parseInt(args[1]);
-        int repetitions = Integer.parseInt(args[2]);
-        int nReducers = Integer.parseInt(args[3]);
+        Options options = new Options();
+
+        options.addOption(null, "no-broadcast-join", false, "Don't perform a broadcast join");
+        options.addOption(null, "no-header", false, "Write no CSV header");
+        options.addOption(null, "rows", true, "The number of rows");
+        options.addOption(null, "steps", true, "The number of runthroughs");
+        options.addOption(null, "increment", true, "The number of rows to increase by");
+        options.addOption(null, "unique-values", true, "The number of unique keys < rows");
+        options.addOption(null, "reducers", true, "The number of reducers");
+        options.addOption(null, "zipf-skew", true, "Skew");
+        options.addOption(null, "double-skew", false, "Whether both tables are skewed");
+        options.addOption(null, "out", true, "Results file name");
+
+        // We cannot use commons-cli 1.4 because it causes trouble with Hadoop already using 1.2
+        CommandLineParser parser = new org.apache.commons.cli.BasicParser();
+
+        CommandLine cmd = parser.parse(options, args);
+
+        boolean performBroadcastJoin = true;
+        boolean writeHeader = true;
+        boolean doubleSkew = false;
+
+        if (cmd.hasOption("no-broadcast-join"))
+            performBroadcastJoin = false;
+
+        if (cmd.hasOption("no-header"))
+            writeHeader = false;
+
+        if (cmd.hasOption("double-skew"))
+            doubleSkew = true;
+
+        long rows = 10000;
+
+        if (cmd.hasOption("rows"))
+            rows = Long.parseLong(cmd.getOptionValue("rows"));
+
+        long increment = rows;
+
+        if (cmd.hasOption("increment"))
+            increment = Long.parseLong(cmd.getOptionValue("increment"));
+
+        int steps = 1;
+
+        if (cmd.hasOption("steps"))
+            steps = Integer.parseInt(cmd.getOptionValue("steps"));
+
+        long uniqueValues = rows / 10;
+
+        if (cmd.hasOption("unique-values"))
+            uniqueValues = Long.parseLong(cmd.getOptionValue("unique-values"));
+
+        int nReducers = 4;
+
+        if (cmd.hasOption("reducers"))
+            nReducers = Integer.parseInt(cmd.getOptionValue("reducers"));
+
         double zipfSkew = 0.5;
 
-        PrintWriter results = new PrintWriter(new FileOutputStream("results " +
-                (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv"));
+        if (cmd.hasOption("zipf-skew"))
+            zipfSkew = Double.parseDouble(cmd.getOptionValue("zipf-skew"));
 
-        results.println("rows,repetitions,reducers,skew," +
-                "map_records_1,reduce_records_1,mt_1,mt_med_1,mt_mu_1,mt_max_1,rt_1,rt_med_1,rt_mu_1,rt_max_1,t_repartition," +
-                "map_records_2,mt_2,mt_med_2,mt_mu_2,mt_max_2,t_broadcast," +
-                "map_records_3,mt_3,mt_med_3,mt_mu_3,mt_max_3,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");
+        String fileName = "results " +
+                (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())) + ".csv";
 
-        for (int i = 1; i <= steps; i++) {
-            int nRows = i * rowsStep;
+        if (cmd.hasOption("out"))
+            fileName = cmd.getOptionValue("out");
 
-            run(results, true, true, true, nRows, repetitions, nReducers, zipfSkew);
+        PrintWriter results = new PrintWriter(new FileOutputStream(fileName));
+
+        if (writeHeader) {
+            results.println("rows,unique_values,reducers,skew," +
+                    "map_records_1,reduce_records_1,mt_1,mt_med_1,mt_mu_1,mt_max_1,rt_1,rt_med_1,rt_mu_1,rt_max_1,t_repartition," +
+                    "map_records_2,mt_2,mt_med_2,mt_mu_2,mt_max_2,t_broadcast," +
+                    "map_records_3,mt_3,mt_med_3,mt_mu_3,mt_max_3,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");
+        }
+
+        for (int i = 0; i < steps; i++) {
+            long nRows = rows + i * increment;
+
+            run(results, true, performBroadcastJoin, true, nRows, uniqueValues, nReducers, zipfSkew, doubleSkew);
         }
 
         results.close();

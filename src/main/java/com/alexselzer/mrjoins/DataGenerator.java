@@ -1,8 +1,5 @@
 package com.alexselzer.mrjoins;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-
 import java.io.*;
 import java.util.*;
 
@@ -48,23 +45,23 @@ public class DataGenerator {
         NUMERIC, STRING
     }
 
-    private int nRows;
+    private long nRows;
     private List<Attribute> attributes;
     private KeyType keyType;
-    private int keyRepetitions;
+    private long uniqueValues;
 
-    public DataGenerator(KeyType keyType, int nRows, List<Attribute> attributes, int keyRepetitions) {
+    public DataGenerator(KeyType keyType, long nRows, List<Attribute> attributes, long uniqueValues) {
         this.keyType = keyType;
         this.nRows = nRows;
         this.attributes = attributes;
-        this.keyRepetitions = keyRepetitions;
+        this.uniqueValues = uniqueValues;
     }
 
     public void write(DataOutputStream file1, DataOutputStream file2) {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
 
-        int keyModulo = nRows / keyRepetitions;
+        long keyModulo = uniqueValues;
 
         for (int i = 0; i < nRows; i++) {
             String row = "" + (i % keyModulo);
@@ -87,15 +84,15 @@ public class DataGenerator {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
 
-        Integer[] keys = new Integer[nRows / keyRepetitions];
-        for (int i = 0; i < nRows / keyRepetitions; i++) {
+        Integer[] keys = new Integer[(int)uniqueValues];
+        for (int i = 0; i < uniqueValues; i++) {
             keys[i] = i;
         }
 
         List<Integer> keysList = new ArrayList<Integer>(Arrays.asList(keys));
         Collections.shuffle(keysList);
 
-        for (int i = 0; i < nRows / keyRepetitions; i++) {
+        for (int i = 0; i < uniqueValues; i++) {
             String row = "" + (keysList.get(i));
 
             for (Attribute a : attributes) {
@@ -108,7 +105,7 @@ public class DataGenerator {
         }
 
         for (int i = 0; i < nRows; i++) {
-            String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) nRows / keyRepetitions);
+            String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) uniqueValues);
 
             for (Attribute a : attributes) {
                 row += "," + a.generate();
@@ -128,7 +125,7 @@ public class DataGenerator {
         PrintWriter t2writer = new PrintWriter(file2);
 
         for (int i = 0; i < nRows; i++) {
-            String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) nRows / keyRepetitions);
+            String row = "" + zipfInverseCdf((double)i / (double)nRows, s, (double) uniqueValues);
 
             for (Attribute a : attributes) {
                 row += "," + a.generate();
