@@ -220,6 +220,7 @@ public class JoinSimulation {
         options.addOption(null, "steps", true, "The number of runthroughs");
         options.addOption(null, "increment", true, "The number of rows to increase by");
         options.addOption(null, "unique-values", true, "The number of unique keys < rows");
+        options.addOption(null, "unique", true, "The percentage of unique values");
         options.addOption(null, "reducers", true, "The number of reducers");
         options.addOption(null, "zipf-skew", true, "Skew");
         options.addOption(null, "double-skew", false, "Whether both tables are skewed");
@@ -258,7 +259,11 @@ public class JoinSimulation {
         if (cmd.hasOption("steps"))
             steps = Integer.parseInt(cmd.getOptionValue("steps"));
 
-        long uniqueValues = rows / 10;
+        double uniquePercentage = 0.10;
+        if (cmd.hasOption("unique-values"))
+            uniquePercentage = Double.parseDouble(cmd.getOptionValue("unique"));
+
+        long uniqueValues = (long) (rows * uniquePercentage);
 
         if (cmd.hasOption("unique-values"))
             uniqueValues = Long.parseLong(cmd.getOptionValue("unique-values"));
