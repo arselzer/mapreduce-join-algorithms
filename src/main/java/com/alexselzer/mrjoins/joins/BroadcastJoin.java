@@ -5,7 +5,9 @@ import com.alexselzer.mrjoins.JoinConfig;
 import com.alexselzer.mrjoins.JoinStats;
 import com.alexselzer.mrjoins.utils.JobUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -68,19 +70,39 @@ public class BroadcastJoin implements Join {
                 System.err.println("Error: There are no cached files");
             }
 
+            Path cachedFileOrDir = new Path(cachedFiles[0]);
+
             //System.out.printf("Cached file: %s\n", cachedFiles[0]);
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(fs.open(new Path(cachedFiles[0]))));
+            if (fs.getFileStatus(cachedFileOrDir).isDirectory()) {
+                for (FileStatus fileStatus : fs.listStatus(cachedFileOrDir)) {
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(fs.open(fileStatus.getPath())));
 
-            String line = reader.readLine();
-            while (line != null) {
-                String joinAttr = line.split(",")[context.getConfiguration().getInt("index1", 0)];
-                map.put(joinAttr, line);
+                    String line = reader.readLine();
+                    while (line != null) {
+                        String joinAttr = line.split(",")[context.getConfiguration().getInt("index1", 0)];
+                        map.put(joinAttr, line);
 
-                line = reader.readLine();
+                        line = reader.readLine();
+                    }
+
+                    reader.close();
+                }
             }
+            else {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(fs.open(new Path(cachedFiles[0]))));
 
-            reader.close();
+                String line = reader.readLine();
+                while (line != null) {
+                    String joinAttr = line.split(",")[context.getConfiguration().getInt("index1", 0)];
+                    map.put(joinAttr, line);
+
+                    line = reader.readLine();
+                }
+
+                reader.close();
+            }
         }
 
         public void map(Object o, Text text, Context context) throws IOException, InterruptedException {

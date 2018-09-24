@@ -108,6 +108,9 @@ public class JoinSimulation {
                 FSDataOutputStream out2 = hdfs.create(input2, true);
 
                 dg.writeZipf(out1, out2, zipfSkew);
+
+                out1.close();
+                out2.close();
             }
         }
         else {
@@ -123,8 +126,8 @@ public class JoinSimulation {
 
         long diff = endTime - startTime;
 
-        System.out.printf("Data generated(nrows=%d): %.3f ms - file size of t2: %dMB\n",
-                nRows, diff / 1000000.0,  hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000);
+        System.out.printf("Data generated(nrows=%d,nthreads=%d): %.3f ms - file size of t2: %dMB\n",
+                nRows, nThreads, diff / 1000000.0,  hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000);
 
         Path output = new Path("simulation_output");
 
