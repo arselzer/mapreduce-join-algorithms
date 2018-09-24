@@ -100,7 +100,15 @@ public class JoinSimulation {
 
         long startTime = System.nanoTime();
         if (!doubleSkew) {
-            dg.writeZipfParallelToHdfs(input1, input2, zipfSkew, nThreads);
+            if (nThreads > 1) {
+                dg.writeZipfParallelToHdfs(input1, input2, zipfSkew, nThreads);
+            }
+            else {
+                FSDataOutputStream out1 = hdfs.create(input1, true);
+                FSDataOutputStream out2 = hdfs.create(input2, true);
+
+                dg.writeZipf(out1, out2, zipfSkew);
+            }
         }
         else {
             FSDataOutputStream out1 = hdfs.create(input1, true);
