@@ -198,7 +198,7 @@ public class JoinSimulation {
         long[] t = join.getJoinStats().getJobTimes();
         results.write("," + mapRecords + "," +
                 joinList(mapTimes, ";") + "," + calcMedian(mapTimes) + "," + calcMean(mapTimes) + "," + calcMax(mapTimes) + "," +
-                "," + t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + "," +
+                t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + "," +
                 (t[0] + t[1] + t[2] + t[3] + t[4]) + "\n");
 
         hdfs.delete(output, true);
