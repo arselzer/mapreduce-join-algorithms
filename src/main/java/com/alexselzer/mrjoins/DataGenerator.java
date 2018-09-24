@@ -1,7 +1,13 @@
 package com.alexselzer.mrjoins;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 public class DataGenerator {
     public static class Attribute {
@@ -120,6 +126,81 @@ public class DataGenerator {
         t2writer.close();
     }
 
+    public void writeZipfParallelToHdfs(Path path1, Path path2, final double s, final int nThreads) throws IOException {
+        final FileSystem hdfs = FileSystem.get(new Configuration());
+
+        hdfs.mkdirs(path1);
+        hdfs.mkdirs(path2);
+
+        final CountDownLatch latch = new CountDownLatch(nThreads);
+
+        for (int thread = 0; thread < nThreads; thread++) {
+
+            final Path f1 = new Path(path1.getName() + "/" + String.format("%04d", thread));
+            final Path f2 = new Path(path2.getName() + "/" + String.format("%04d", thread));
+
+            final FSDataOutputStream out1 = hdfs.create(f1, true);
+            final FSDataOutputStream out2 = hdfs.create(f2, true);
+
+            final int t = thread;
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    PrintWriter t1writer = new PrintWriter(out1);
+                    PrintWriter t2writer = new PrintWriter(out2);
+
+                    Long[] keys = new Long[(int) uniqueValues / nThreads];
+                    for (int i = 0; i < uniqueValues / nThreads; i++) {
+                        keys[i] = t * uniqueValues / nThreads + i;
+                    }
+
+                    List<Long> keysList = new ArrayList<>(Arrays.asList(keys));
+                    Collections.shuffle(keysList);
+
+                    for (int i = 0; i < uniqueValues / nThreads; i++) {
+                        String row = "" + (keysList.get(i));
+
+                        for (Attribute a : attributes) {
+                            row += "," + a.generate();
+                        }
+
+                        row += "\n";
+
+                        t1writer.write(row);
+                    }
+
+                    for (int i = 0; i < nRows / nThreads; i++) {
+                        //System.out.printf("p = %f, t = %d\n", (double) (i + t * nRows / nThreads) / (double) nRows, t);
+
+                        String row = "" + zipfInverseCdf((double) (i + t * nRows / nThreads) / (double) nRows,
+                                s, (double) uniqueValues);
+
+                        for (Attribute a : attributes) {
+                            row += "," + a.generate();
+                        }
+
+                        row += "\n";
+
+                        t2writer.write(row);
+                    }
+
+                    t1writer.close();
+                    t2writer.close();
+
+                    latch.countDown();
+
+                }
+            }).run();
+        }
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void writeZipfBoth(DataOutputStream file1, DataOutputStream file2, double s) {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
@@ -146,36 +227,41 @@ public class DataGenerator {
      * @param args
      */
     public static void main(String[] args) throws IOException {
+        final FileSystem hdfs = FileSystem.get(new Configuration());
+
         int rowsStep = 1000000;
         int repetitions = 10;
 
-        for (int i = 1; i <= 6; i++) {
+        for (int i = 1; i <= 3; i++) {
             int nRows = i * rowsStep;
 
             DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
                     Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
-                            new DataGenerator.Attribute(80)), repetitions);
+                            new DataGenerator.Attribute(80)), nRows / 10);
 
-            File input1 = new File("t1_" + nRows + ".csv");
-            File input2 = new File("t2_" + nRows + ".csv");
+//            File input1 = new File("t1_" + nRows + ".csv");
+//            File input2 = new File("t2_" + nRows + ".csv");
 
-            DataOutputStream out1 = new DataOutputStream(new FileOutputStream(input1));
-            DataOutputStream out2 = new DataOutputStream(new FileOutputStream(input2));
+            Path input1 = new Path("t1_" + nRows + ".csv");
+            Path input2 = new Path("t2_" + nRows + ".csv");
+
+            //DataOutputStream out1 = new DataOutputStream(new FileOutputStream(input1));
+            //DataOutputStream out2 = new DataOutputStream(new FileOutputStream(input2));
 
             long startTime = System.nanoTime();
-            dg.writeZipf(out1, out2, 0.5);
+            dg.writeZipfParallelToHdfs(input1, input2, 0.5, 8);
             long endTime = System.nanoTime();
 
             long diff = endTime - startTime;
 
-            out1.close();
-            out2.close();
+            //out1.close();
+            //out2.close();
 
-            System.out.printf("Data generated(nrows=%d): %.3f ms - file size: %dMB\n",
-                    nRows, diff / 1000000.0, input1.length() / 1000000);
+            System.out.printf("Data generated(nrows=%d): %.3f ms - file size of t2: %dMB\n",
+                    nRows, diff / 1000000.0,  hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000);
 
-            input1.delete();
-            input2.delete();
+            hdfs.delete(input1, true);
+            hdfs.delete(input2, true);
         }
     }
 

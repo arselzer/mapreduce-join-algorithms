@@ -85,7 +85,7 @@ public class JoinSimulation {
     }
 
     private static void run(PrintWriter results, boolean repartitionJoin, boolean broadcastJoin, boolean mergeJoin,
-                              long nRows, long uniqueValues, int nReducers, double zipfSkew, boolean doubleSkew) throws IOException, ClassNotFoundException, InterruptedException {
+                              long nRows, long uniqueValues, int nReducers, double zipfSkew, boolean doubleSkew, int nThreads) throws IOException, ClassNotFoundException, InterruptedException {
 
         DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
                 Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
@@ -98,24 +98,25 @@ public class JoinSimulation {
         Path input1 = new Path("t1_" + nRows + ".csv");
         Path input2 = new Path("t2_" + nRows + ".csv");
 
-        FSDataOutputStream out1 = hdfs.create(input1, true);
-        FSDataOutputStream out2 = hdfs.create(input2, true);
-
         long startTime = System.nanoTime();
         if (!doubleSkew) {
-            dg.writeZipf(out1, out2, zipfSkew);
+            dg.writeZipfParallelToHdfs(input1, input2, zipfSkew, nThreads);
         }
         else {
+            FSDataOutputStream out1 = hdfs.create(input1, true);
+            FSDataOutputStream out2 = hdfs.create(input2, true);
+
             dg.writeZipfBoth(out1, out2, zipfSkew);
+
+            out1.close();
+            out2.close();
         }
         long endTime = System.nanoTime();
 
         long diff = endTime - startTime;
 
-        System.out.printf("Data generated (%d rows): %.3f ms\n", nRows, diff / 1000000.0);
-
-        out1.close();
-        out2.close();
+        System.out.printf("Data generated(nrows=%d): %.3f ms - file size of t2: %dMB\n",
+                nRows, diff / 1000000.0,  hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000);
 
         Path output = new Path("simulation_output");
 
@@ -225,6 +226,7 @@ public class JoinSimulation {
         options.addOption(null, "zipf-skew", true, "Skew");
         options.addOption(null, "double-skew", false, "Whether both tables are skewed");
         options.addOption(null, "out", true, "Results file name");
+        options.addOption(null, "threads", true, "The number of threads to use for generating data");
 
         // We cannot use commons-cli 1.4 because it causes trouble with Hadoop already using 1.2
         CommandLineParser parser = new org.apache.commons.cli.BasicParser();
@@ -284,6 +286,10 @@ public class JoinSimulation {
         if (cmd.hasOption("out"))
             fileName = cmd.getOptionValue("out");
 
+        int nThreads = 1;
+        if (cmd.hasOption("threads"))
+            nThreads = Integer.parseInt(cmd.getOptionValue("threads"));
+
         PrintWriter results = new PrintWriter(new FileOutputStream(fileName));
 
         if (writeHeader) {
@@ -296,7 +302,8 @@ public class JoinSimulation {
         for (int i = 0; i < steps; i++) {
             long nRows = rows + i * increment;
 
-            run(results, true, performBroadcastJoin, true, nRows, uniqueValues, nReducers, zipfSkew, doubleSkew);
+            run(results, true, performBroadcastJoin, true,
+                    nRows, uniqueValues, nReducers, zipfSkew, doubleSkew, nThreads);
         }
 
         results.close();
