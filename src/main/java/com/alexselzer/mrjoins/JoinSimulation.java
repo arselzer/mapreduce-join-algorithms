@@ -85,7 +85,8 @@ public class JoinSimulation {
     }
 
     private static void run(PrintWriter results, boolean repartitionJoin, boolean broadcastJoin, boolean mergeJoin,
-                              long nRows, long uniqueValues, int nReducers, double zipfSkew, boolean doubleSkew, int nThreads) throws IOException, ClassNotFoundException, InterruptedException {
+                              long nRows, long uniqueValues, int nReducers, double zipfSkew, boolean doubleSkew,
+                            int nThreads) throws IOException, ClassNotFoundException, InterruptedException {
 
         DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
                 Arrays.asList(new DataGenerator.Attribute(20), new DataGenerator.Attribute(100),
@@ -196,18 +197,21 @@ public class JoinSimulation {
 
         /* Run the merge join */
 
-        join = new MergeJoin();
-        join.init(config, "merge-join" + meta);
+        MergeJoin join3 = new MergeJoin();
+        join3.init(config, "merge-join" + meta, true, true,
+                (int) (0.9 * nRows / DataGenerator.getMaxZipfRepeats(uniqueValues, zipfSkew, nRows))); // Add 10% to be safe
+
+        System.out.printf("Max num splits: %d\n", (int) (0.8 * nRows / DataGenerator.getMaxZipfRepeats(uniqueValues, zipfSkew, nRows)));
 
         System.out.printf("Running %s", "merge-join" + meta);
 
-        join.run(true);
+        join3.run(true);
 
-        mapRecords = join.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+        mapRecords = join3.getJoinStats().getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
 
-        mapTimes = getTaskTimes(join.getJoinStats().getMapTasks());
+        mapTimes = getTaskTimes(join3.getJoinStats().getMapTasks());
 
-        long[] t = join.getJoinStats().getJobTimes();
+        long[] t = join3.getJoinStats().getJobTimes();
         results.write("," + mapRecords + "," +
                 joinList(mapTimes, ";") + "," + calcMedian(mapTimes) + "," + calcMean(mapTimes) + "," + calcMax(mapTimes) + "," +
                 t[0] + "," + t[1] + "," + t[2] + "," + t[3] + "," + t[4] + "," +

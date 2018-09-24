@@ -63,6 +63,42 @@ public class DataGenerator {
         this.uniqueValues = uniqueValues;
     }
 
+    /**
+     * Calculate how often the most common value will occur
+     * @param N The number of unique values (population)
+     * @param s The skew
+     * @return
+     */
+    public static double getMaxZipfRepeats(long N, double s, long count) {
+        /**
+         * https://en.wikipedia.org/wiki/Zipf%27s_law
+         *
+         * From the pmf: p(k) = 1 / (k^s * H(N, s))
+         * => occurrences of k = 1: count / H(N, s)
+         */
+        return count / generalizedHarmonic((int) N, s);
+    }
+
+    /**
+     * Taken from commons-math:
+     *
+     * 213     * Calculates the Nth generalized harmonic number. See
+     * 214     * <a href="http://mathworld.wolfram.com/HarmonicSeries.html">Harmonic
+     * 215     * Series</a>.
+     * 216     *
+     * 217     * @param n Term in the series to calculate (must be larger than 1)
+     * 218     * @param m Exponent (special case {@code m = 1} is the harmonic series).
+     * 219     * @return the n<sup>th</sup> generalized harmonic number.
+     * 220
+     */
+    private static double generalizedHarmonic(final int n, final double m) {
+        double value = 0;
+        for (int k = n; k > 0; --k) {
+            value += 1.0 / Math.pow(k, m);
+        }
+        return value;
+    }
+
     public void write(DataOutputStream file1, DataOutputStream file2) {
         PrintWriter t1writer = new PrintWriter(file1);
         PrintWriter t2writer = new PrintWriter(file2);
@@ -229,10 +265,12 @@ public class DataGenerator {
     public static void main(String[] args) throws IOException {
         final FileSystem hdfs = FileSystem.get(new Configuration());
 
+        System.out.println("Max: " + (int) (0.8 * 2000000 / DataGenerator.getMaxZipfRepeats(200000, 1.0, 2000000)));
+
         int rowsStep = 1000000;
         int repetitions = 10;
 
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 1; i++) {
             int nRows = i * rowsStep;
 
             DataGenerator dg = new DataGenerator(DataGenerator.KeyType.NUMERIC, nRows,
@@ -263,6 +301,10 @@ public class DataGenerator {
             hdfs.delete(input1, true);
             hdfs.delete(input2, true);
         }
+    }
+
+    private static void main2(String[] args) {
+
     }
 
     /**

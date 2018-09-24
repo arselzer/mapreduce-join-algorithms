@@ -48,18 +48,21 @@ public class MergeJoin implements Join {
     private JoinConfig config;
     private String name;
 
+    private int maxSplits;
+
     private JoinStats stats = new JoinStats();
 
     @Override
     public void init(JoinConfig config, String name) throws IOException, ClassNotFoundException, InterruptedException {
-        init(config, name, true, true);
+        init(config, name, true, true, 1000);
     }
 
-    public void init(JoinConfig config, String name, boolean extractKeys, boolean sort) throws IOException, InterruptedException, ClassNotFoundException {
+    public void init(JoinConfig config, String name, boolean extractKeys, boolean sort, int maxSplits) throws IOException, InterruptedException, ClassNotFoundException {
         this.extractKeys = extractKeys;
         this.sort = sort;
         this.config = config;
         this.name = name;
+        this.maxSplits = maxSplits;
     }
 
 
@@ -171,6 +174,9 @@ public class MergeJoin implements Join {
             sortLeft.setSortComparatorClass(LongWritable.Comparator.class);
             sortRight.setSortComparatorClass(LongWritable.Comparator.class);
 
+            sortLeft.setGroupingComparatorClass(LongWritable.Comparator.class);
+            sortRight.setGroupingComparatorClass(LongWritable.Comparator.class);
+
             sortLeft.setNumReduceTasks(config.getNumReducers());
             sortRight.setNumReduceTasks(config.getNumReducers());
 
@@ -180,7 +186,13 @@ public class MergeJoin implements Join {
             TotalOrderPartitioner.setPartitionFile(sortLeft.getConfiguration(), partitionFile);
             TotalOrderPartitioner.setPartitionFile(sortRight.getConfiguration(), partitionFile);
 
-            InputSampler.Sampler<IntWritable, Text> sampler = new InputSampler.RandomSampler<>(0.01, 2000, 1000);
+            if (maxSplits < config.getNumReducers()) {
+                sortLeft.setNumReduceTasks(maxSplits);
+                sortRight.setNumReduceTasks(maxSplits);
+            }
+
+            InputSampler.Sampler<IntWritable, Text> sampler = new InputSampler.RandomSampler<>(0.01,
+                    2000, Math.min(1000, maxSplits));
             InputSampler.writePartitionFile(sortRight, sampler);
 
             sortLeft.setPartitionerClass(TotalOrderPartitioner.class);
@@ -223,6 +235,9 @@ public class MergeJoin implements Join {
         FileOutputFormat.setOutputPath(mergeJob, config.getOutput());
 
         mergeJob.setInputFormatClass(CompositeInputFormat.class);
+
+        mergeJob.setSortComparatorClass(LongWritable.Comparator.class);
+        mergeJob.setGroupingComparatorClass(LongWritable.Comparator.class);
 
         mergeJob.setMapperClass(MergeJoinMapper.class);
         mergeJob.setNumReduceTasks(0);
