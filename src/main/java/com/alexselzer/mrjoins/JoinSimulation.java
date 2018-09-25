@@ -130,6 +130,8 @@ public class JoinSimulation {
         System.out.printf("Data generated(nrows=%d,nthreads=%d): %.3f ms - file size of t2: %dMB\n",
                 nRows, nThreads, diff / 1000000.0,  hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000);
 
+        results.write("," + (hdfs.getContentSummary(input2).getSpaceConsumed() / 1000000));
+
         Path output = new Path("simulation_output");
 
         if (hdfs.exists(output)) {
@@ -308,7 +310,7 @@ public class JoinSimulation {
         PrintWriter results = new PrintWriter(new FileOutputStream(fileName));
 
         if (writeHeader) {
-            results.println("rows,unique_values,reducers,skew," +
+            results.println("rows,unique_values,reducers,skew,file_size," +
                     "map_records_1,reduce_records_1,mt_1,mt_med_1,mt_mu_1,mt_max_1,rt_1,rt_med_1,rt_mu_1,rt_max_1,t_repartition," +
                     "map_records_2,mt_2,mt_med_2,mt_mu_2,mt_max_2,t_broadcast," +
                     "map_records_3,mt_3,mt_med_3,mt_mu_3,mt_max_3,t_merge_1_1,t_merge_1_2,t_merge_2_1,t_merge_2_2,t_merge_3,t_merge");

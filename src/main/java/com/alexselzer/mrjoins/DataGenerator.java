@@ -303,10 +303,6 @@ public class DataGenerator {
         }
     }
 
-    private static void main2(String[] args) {
-
-    }
-
     /**
      * An approximation of the inverse CDF of the Zipf distribution
      * Source: https://medium.com/@jasoncrease/zipf-54912d5651cc
