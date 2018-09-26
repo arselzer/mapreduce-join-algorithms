@@ -27,26 +27,28 @@ reducer_times_06 = as.vector(as.numeric(unlist(strsplit(as.character(data$rt_1[9
 reducer_times_10 = as.vector(as.numeric(unlist(strsplit(as.character(data$rt_1[10]), ";")))) / 1000;
 
 p1 <- ggplot() + aes(reducer_times_01) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Reducers") +
+  labs(x = "Time (Seconds)", y = "# Reduce Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Reducer Runtimes (skew = 0.1)")
+  ggtitle("Reduce Task Runtimes (skew = 0.1)")
 
 p2 <- ggplot() + aes(reducer_times_03) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Reducers") +
+  labs(x = "Time (Seconds)", y = "# Reduce Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Reducer Runtimes (skew = 0.7)")
+  ggtitle("Reduce Task Runtimes (skew = 0.7)")
 
 p3 <- ggplot() + aes(reducer_times_06) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Reducers") +
+  labs(x = "Time (Seconds)", y = "# Reduce Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Reducer Runtimes (skew = 0.9)")
+  ggtitle("Reduce Task Runtimes (skew = 0.9)")
 
 p4 <- ggplot() + aes(reducer_times_10) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Reducers") +
+  labs(x = "Time (Seconds)", y = "# Reduce Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Reducer Runtimes (skew = 1.0)")
+  ggtitle("Reduce Task Runtimes (skew = 1.0)")
 
 grid.arrange(p1, p2, p3, p4, nrow=2, ncol=2);
+
+ggsave("reducer_runtimes_repartition.pdf")
 
 ### Broadcast Join ###
 
@@ -65,26 +67,28 @@ mapper_times_06 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_2[6]
 mapper_times_10 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_2[10]), ";")))) / 1000;
 
 p1 <- ggplot() + aes(mapper_times_01) + geom_histogram(binwidth=4, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+  labs(x = "Time (Seconds)", y = "# Reduce Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.1)")
+  ggtitle("Map Task Runtimes (skew = 0.1)")
 
 p2 <- ggplot() + aes(mapper_times_03) + geom_histogram(binwidth=4, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.3)")
+  ggtitle("Map Task Runtimes (skew = 0.3)")
 
 p3 <- ggplot() + aes(mapper_times_06) + geom_histogram(binwidth=4, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.6)")
+  ggtitle("Map Task Runtimes (skew = 0.6)")
 
 p4 <- ggplot() + aes(mapper_times_10) + geom_histogram(binwidth=4, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 1.0)")
+  ggtitle("Map Task Runtimes (skew = 1.0)")
 
 grid.arrange(p1, p2, p3, p4, nrow=2, ncol=2);
+
+ggsave("mapper_runtimes_broadcast.pdf")
 
 ### Merge Join ##
 
@@ -98,31 +102,33 @@ ggsave("skew_merge_join_large.pdf");
 ### Merge Join Skew ###
 
 mapper_times_01 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_3[1]), ";")))) / 1000;
-mapper_times_03 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_3[3]), ";")))) / 1000;
 mapper_times_06 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_3[6]), ";")))) / 1000;
+mapper_times_08 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_3[8]), ";")))) / 1000;
 mapper_times_10 = as.vector(as.numeric(unlist(strsplit(as.character(data$mt_3[10]), ";")))) / 1000;
 
 p1 <- ggplot() + aes(mapper_times_01) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.1)")
+  ggtitle("Map Task Runtimes (skew = 0.1)")
 
-p2 <- ggplot() + aes(mapper_times_03) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+p2 <- ggplot() + aes(mapper_times_06) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.3)")
+  ggtitle("Map Task Runtimes (skew = 0.6)")
 
-p3 <- ggplot() + aes(mapper_times_06) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+p3 <- ggplot() + aes(mapper_times_08) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 0.6)")
+  ggtitle("Map Task Runtimes (skew = 0.8)")
 
-p4 <- ggplot() + aes(mapper_times_10) + geom_histogram(binwidth=.5, color="black", fill="#45CC56") +
-  labs(x = "Time (Seconds)", y = "# Mappers") +
+p4 <- ggplot() + aes(mapper_times_10) + geom_histogram(binwidth=4, color="black", fill="#45CC56") +
+  labs(x = "Time (Seconds)", y = "# Map Tasks") +
   scale_x_continuous(labels=scales::comma) +
-  ggtitle("Mapper Runtimes (skew = 1.0)")
+  ggtitle("Map Task Runtimes (skew = 1.0)")
 
 grid.arrange(p1, p2, p3, p4, nrow=2, ncol=2);
+
+ggsave("mapper_runtimes_.pdf")
 
 ### Comparison of all Joins ###
 
